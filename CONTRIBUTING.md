@@ -4,7 +4,7 @@ There are four ways in. Pick the lightest one that interests you.
 
 ## 1. Watch
 
-Open the replay page at https://sturdynut.com/token-nom-noms/ and scrub through
+Open the replay page at https://sturdynut.github.io/token-nom-noms/ and scrub through
 the runs. No install needed. The same page is `docs/index.html` in the repo.
 
 ## 2. Run your agent and submit the run

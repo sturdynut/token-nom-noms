@@ -1,8 +1,8 @@
 # token-nom-noms
 
-**Watch the runs:** https://sturdynut.com/token-nom-noms/
+**Watch the runs:** https://sturdynut.github.io/token-nom-noms/
 
-[![Claude haiku's creature at tick 31, running on its fourth reflex after two world shifts](docs/screenshot.png)](https://sturdynut.com/token-nom-noms/#run=2&tick=31)
+[![Claude haiku's creature at tick 31, running on its fourth reflex after two world shifts](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=2&tick=31)
 
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.

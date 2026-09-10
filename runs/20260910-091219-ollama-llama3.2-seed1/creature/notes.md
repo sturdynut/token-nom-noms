@@ -1,0 +1,1 @@
+Consider the predator's movement pattern and how it might affect my strategy. Think about the different stages of a predator's life and how they might influence its movement pattern.

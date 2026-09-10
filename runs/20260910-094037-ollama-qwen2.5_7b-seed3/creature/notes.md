@@ -1,0 +1,1 @@
+Staying put for now to conserve energy and avoid potential predators. Will reassess in the next tick.

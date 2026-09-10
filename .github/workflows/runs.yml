@@ -1,0 +1,50 @@
+name: runs
+
+on:
+  pull_request:
+    paths: ["runs/**", "nomnom/**"]
+  push:
+    branches: [main]
+    paths: ["runs/**", "nomnom/**"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate every run folder
+        run: python3 -m nomnom validate
+      - name: Leaderboard and replay page are current
+        run: |
+          python3 -m nomnom leaderboard
+          python3 -m nomnom html $(ls -d runs/*/) -o docs/index.html
+          git diff --exit-code -- runs/README.md docs/index.html || {
+            echo "::error::runs/README.md or docs/index.html is stale. Run: python3 -m nomnom leaderboard && python3 -m nomnom html \$(ls -d runs/*/) -o docs/index.html"
+            exit 1
+          }
+
+  rebuild:
+    if: github.event_name == 'push'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild leaderboard and replay page
+        run: |
+          python3 -m nomnom leaderboard
+          python3 -m nomnom html $(ls -d runs/*/) -o docs/index.html
+      - name: Commit if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add runs/README.md docs/index.html
+          git diff --cached --quiet || git commit -m "Rebuild leaderboard and replay page"
+          git push

@@ -1,0 +1,1 @@
+Tick 0: Energy 20/30. Predator distant at [-5,-5]. Closest food at [2,0] (distance 2). Moving east. Reflex: (1) escape if predator adjacent, (2) else pursue closest food by Manhattan distance. Will report every 10 ticks.

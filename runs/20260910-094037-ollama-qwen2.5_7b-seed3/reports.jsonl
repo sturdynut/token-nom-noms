@@ -1,0 +1,1 @@
+{"tick": 10, "budget_after": 28894, "report": {"strategy": "Conserving energy by not moving", "changed": "None", "expected_savings": "Significant", "confidence": 0.9}, "raw": "{\"strategy\": \"Conserving energy by not moving\", \"changed\": \"None\", \"expected_savings\": \"Significant\", \"confidence\": 0.9}", "error": null}

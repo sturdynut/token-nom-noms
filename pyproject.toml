@@ -1,0 +1,16 @@
+[project]
+name = "token-nom-noms"
+version = "0.1.0"
+description = "A survival game where the creature's brain is an LLM agent that pays for every thought with tokens."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+nomnom = "nomnom.__main__:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["nomnom"]

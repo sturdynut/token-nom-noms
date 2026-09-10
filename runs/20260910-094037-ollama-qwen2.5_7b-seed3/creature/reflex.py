@@ -1,0 +1,1 @@
+def act(obs): return 'stay' if obs['energy'] < 10 or obs['predator'] else None

@@ -147,6 +147,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
         <span><i class="sw" style="background:var(--model)"></i>paid: the model was called</span>
         <span><i class="sw" style="background:var(--reflex)"></i>free: reflex decided</span>
         <span><i class="sw" style="background:var(--idle)"></i>idle: no budget, no reflex</span>
+        <span><i class="sw" style="background:var(--food)"></i>report filed (stacked on top)</span>
         <span><i class="sw" style="border-left:2px dashed var(--food);width:0;border-radius:0"></i>world shifted</span>
       </div>
     </div>
@@ -161,7 +162,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   </div>
   <div class="strip" id="strip" tabindex="0" aria-label="Spend per tick, click or drag to scrub"><svg id="stripsvg" preserveAspectRatio="none"></svg><div class="tip" id="tip"></div></div>
   <input type="range" id="scrub" min="1" max="1" value="1" aria-label="Tick">
-  <div class="hint">Drag the strip or use ← → keys. Bar height is tokens charged that tick; reports fall on the tick they were filed.</div>
+  <div class="hint">Drag the strip or use ← → keys. Bar height is tokens charged that tick, with the report's cost stacked on the tick it was filed.</div>
 </section>
 
 <section class="foot">
@@ -176,10 +177,15 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   const $ = id => document.getElementById(id);
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   let run = RUNS[0], i = 0, timer = null;
+  // deep links: #run=<index>&tick=<n>
+  const hash = Object.fromEntries(location.hash.replace(/^#/, '').split('&').filter(Boolean).map(kv => kv.split('=').map(decodeURIComponent)));
+  if (hash.run && RUNS[+hash.run]) run = RUNS[+hash.run];
+  function syncHash() { try { history.replaceState(null, '', '#run=' + RUNS.indexOf(run) + '&tick=' + run.ticks[i].tick); } catch (e) {} }
 
   const sel = $('runsel');
   RUNS.forEach((r, k) => { const o = document.createElement('option'); o.value = k; o.textContent = r.runtime + ' · ' + (r.model || '') + ' · seed ' + r.cfg.seed; sel.appendChild(o); });
   if (RUNS.length < 2) { sel.hidden = true; $('runsel-label').hidden = true; }
+  sel.value = RUNS.indexOf(run);
   sel.addEventListener('change', () => { run = RUNS[+sel.value]; i = 0; stop(); buildStrip(); buildFoot(); show(); });
 
   function callsAt(t, kind) { return run.calls.filter(c => c.tick === t && (!kind || c.kind === kind)); }
@@ -241,7 +247,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     if (rp.length) html += rp.map(c => '<div class="a" style="color:var(--food)">report filed this tick · ' + fmt(c.charged) + ' tokens</div>').join('');
     $('thoughts').innerHTML = html || '<span class="empty">none</span>';
     $('scrub').value = t.tick;
-    draw(); markStrip();
+    draw(); markStrip(); syncHash();
   }
 
   // ---- spend strip -----------------------------------------------------
@@ -249,17 +255,19 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   let bars = [];
   function buildStrip() {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const n = run.ticks.length, max = Math.max(1, ...run.ticks.map(t => t.tick_cost));
+    const n = run.ticks.length;
+    const reportCost = t => callsAt(t.tick, 'report').reduce((a, c) => a + (c.charged || 0), 0);
+    const max = Math.max(1, ...run.ticks.map(t => t.tick_cost + reportCost(t)));
     svg.setAttribute('viewBox', '0 0 ' + n * 10 + ' 100');
     bars = run.ticks.map((t, k) => {
       const g = document.createElementNS(NS, 'g');
-      const h = t.tick_cost > 0 ? Math.max(3, 96 * t.tick_cost / max) : 2;
+      const h = t.tick_cost > 0 ? Math.max(3, 96 * t.tick_cost / max) : (t.source === 'idle' ? 2 : 4);
       const r = document.createElementNS(NS, 'rect');
       r.setAttribute('x', k * 10 + 1); r.setAttribute('y', 100 - h); r.setAttribute('width', 8); r.setAttribute('height', h);
       r.setAttribute('fill', t.source === 'reflex' ? css('--reflex') : t.source === 'idle' ? css('--idle') : css('--model'));
-      if (t.tick_cost === 0 && t.source !== 'idle') r.setAttribute('height', 4), r.setAttribute('y', 96);
       g.appendChild(r);
-      if (callsAt(t.tick, 'report').length) { const d = document.createElementNS(NS, 'circle'); d.setAttribute('cx', k * 10 + 5); d.setAttribute('cy', 100 - h - 5); d.setAttribute('r', 2.2); d.setAttribute('fill', css('--food')); g.appendChild(d); }
+      const rc = reportCost(t);
+      if (rc > 0) { const rh = Math.max(3, 96 * rc / max); const d = document.createElementNS(NS, 'rect'); d.setAttribute('x', k * 10 + 1); d.setAttribute('y', 100 - h - 1 - rh); d.setAttribute('width', 8); d.setAttribute('height', rh); d.setAttribute('fill', css('--food')); g.appendChild(d); }
       svg.appendChild(g); return g;
     });
     run.ticks.forEach((t, k) => { if (!t.drift) return; const l = document.createElementNS(NS, 'line'); l.setAttribute('x1', k * 10 + 10); l.setAttribute('x2', k * 10 + 10); l.setAttribute('y1', 0); l.setAttribute('y2', 100); l.setAttribute('stroke', css('--food')); l.setAttribute('stroke-width', 1); l.setAttribute('stroke-dasharray', '3 2'); l.setAttribute('vector-effect', 'non-scaling-stroke'); svg.appendChild(l); });
@@ -272,7 +280,8 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   let dragging = false;
   strip.addEventListener('pointerdown', e => { dragging = true; strip.setPointerCapture(e.pointerId); stop(); i = tickFromEvent(e); show(); });
   strip.addEventListener('pointermove', e => { const k = tickFromEvent(e); const t = run.ticks[k]; const b = strip.getBoundingClientRect(); tip.style.display = 'block'; tip.style.left = ((k + 0.5) / run.ticks.length * b.width) + 'px'; tip.style.top = '0px';
-    tip.textContent = 'tick ' + t.tick + ' · ' + t.source.replace(/_/g, ' ') + ' · ' + fmt(t.tick_cost) + ' tokens · ' + fmt(t.budget_after) + ' left'; if (dragging) { i = k; show(); } });
+    const rc = callsAt(t.tick, 'report').reduce((a, c) => a + (c.charged || 0), 0);
+    tip.textContent = 'tick ' + t.tick + ' · ' + t.source.replace(/_/g, ' ') + ' · ' + fmt(t.tick_cost) + ' tokens' + (rc ? ' + report ' + fmt(rc) : '') + ' · ' + fmt(t.budget_after - rc) + ' left'; if (dragging) { i = k; show(); } });
   strip.addEventListener('pointerup', () => dragging = false);
   strip.addEventListener('pointerleave', () => { tip.style.display = 'none'; dragging = false; });
   $('scrub').addEventListener('input', e => { stop(); i = +e.target.value - 1; show(); });
@@ -302,7 +311,9 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('reflex').textContent = run.reflex || 'The creature never wrote a reflex.';
   }
 
-  buildStrip(); buildFoot(); show();
+  buildStrip(); buildFoot();
+  if (hash.tick) { const k = run.ticks.findIndex(t => t.tick === +hash.tick); if (k >= 0) i = k; }
+  show();
   let raf = null; window.addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
   if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildStrip(); show(); }); }
   new MutationObserver(() => { buildStrip(); show(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });

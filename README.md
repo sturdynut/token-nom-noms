@@ -1,5 +1,7 @@
 # token-nom-noms
 
+**Watch the runs:** https://sturdynut.github.io/token-nom-noms/
+
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.
 The point of the game is to survive. The point of the project is to harvest

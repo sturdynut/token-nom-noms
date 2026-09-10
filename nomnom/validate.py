@@ -14,6 +14,13 @@ def _load(path):
         return [json.loads(l) for l in f if l.strip()]
 
 
+def _norm(v):
+    """Compare lists of cells as sets: older logs ordered ties by Python's set iteration order."""
+    if isinstance(v, list) and v and all(isinstance(x, list) for x in v):
+        return sorted(tuple(x) for x in v)
+    return v
+
+
 def validate_run(run_dir: str) -> list:
     """Return a list of problems. Empty means the run is internally consistent."""
     problems = []
@@ -51,15 +58,17 @@ def validate_run(run_dir: str) -> list:
         if expected_obs:
             got = w.observe()
             for k in ("pos", "energy", "food", "predator"):
-                if got.get(k) != expected_obs.get(k):
+                if _norm(got.get(k)) != _norm(expected_obs.get(k)):
                     problems.append("tick %d: %s was %s in the log, replay gives %s" % (t["tick"], k, expected_obs.get(k), got.get(k)))
                     return problems
         w.step(t["action"])
         st = t.get("state")
         if st:
             got = w.state()
-            for k in ("pos", "energy", "food", "alive"):
-                if got.get(k) != st.get(k):
+            for k in ("pos", "energy", "food", "alive", "predators"):
+                if k == "predators" and k not in st:
+                    continue
+                if _norm(got.get(k)) != _norm(st.get(k)):
                     problems.append("tick %d: %s after step was %s in the log, replay gives %s" % (t["tick"], k, st.get(k), got.get(k)))
                     return problems
         if bool(w.alive) != bool(t["alive"]):

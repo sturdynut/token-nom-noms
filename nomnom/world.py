@@ -65,7 +65,7 @@ class World:
         if not self.predators:
             return None
         cx, cy = self.creature
-        return min(self.predators, key=lambda p: abs(p[0] - cx) + abs(p[1] - cy))
+        return min(sorted(self.predators), key=lambda p: abs(p[0] - cx) + abs(p[1] - cy))
 
     def _empty_cells(self):
         occupied = set(self.food) | {self.creature} | set(self.predators)
@@ -90,9 +90,9 @@ class World:
 
     def observe(self) -> dict:
         cx, cy = self.creature
-        dist = lambda d: abs(d[0]) + abs(d[1])  # noqa: E731
-        food = sorted((self._rel(f) for f in self.food), key=dist)
-        preds = sorted((self._rel(p) for p in self.predators), key=dist)
+        key = lambda d: (abs(d[0]) + abs(d[1]), d[0], d[1])  # noqa: E731  distance, then a fixed tie-break
+        food = sorted((self._rel(f) for f in self.food), key=key)
+        preds = sorted((self._rel(p) for p in self.predators), key=key)
         return {
             "tick": self.tick_no,
             "pos": [cx, cy],
@@ -167,7 +167,7 @@ class World:
             for (px, py) in self.predators:
                 target = self.creature
                 if self.predator_mode == "camp" and self.food:
-                    target = min(self.food, key=lambda f: abs(f[0] - px) + abs(f[1] - py))
+                    target = min(sorted(self.food), key=lambda f: abs(f[0] - px) + abs(f[1] - py))
                 tx, ty = target
                 if abs(tx - px) >= abs(ty - py):
                     px += (tx > px) - (tx < px)

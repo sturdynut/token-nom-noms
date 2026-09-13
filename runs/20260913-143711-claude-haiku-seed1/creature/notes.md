@@ -1,0 +1,1 @@
+Tick 1/10: Moving toward nearest food at [1,-1] (distance ~1.4). Energy 20/30. Predator at [-5,-5] is distant (10 moves). Reflex will navigate toward food while avoiding rocks.

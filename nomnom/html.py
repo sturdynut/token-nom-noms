@@ -198,7 +198,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       <p>That is the entire game, and it is the same question anyone building with AI has to answer. Each run below is one agent trying to work it out, logged down to the last token.</p>
     </div>
   </div>
-  <p class="finding">So far, a reflex a person wrote in five minutes, costing nothing at all, is outliving every agent that paid to think.</p>
+  <p class="finding">The surprise so far: the better the model, the less it spends. The strongest wrote itself a pathfinder on its very first move and barely thought again, outliving a weaker model that burned nearly three times the tokens before dying.</p>
   <p class="guide">Pick a run, press play, and watch the bar along the bottom.
     <span class="k paid">Purple</span> is a paid thought.
     <span class="k free">Green</span> is the free reflex playing.
@@ -363,7 +363,9 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     if (s) { const dead = !s.alive; $('outcome').className = 'pill ' + (dead ? 'dead' : 'alive'); $('outcome').textContent = dead ? s.cause_of_death + ' at tick ' + s.survived_ticks : 'alive after ' + s.survived_ticks + ' ticks'; }
     $('tick').textContent = t.tick; $('of').textContent = '/ ' + cfg.ticks + ' ticks';
     $('stagepill').textContent = stageOf(t.tick);
-    $('ebar').style.width = (100 * st.energy / cfg.max_energy) + '%'; $('eval').textContent = st.energy + ' / ' + cfg.max_energy;
+    const emax = st.max_energy || cfg.max_energy;
+    $('ebar').style.width = Math.min(100, 100 * st.energy / emax) + '%';
+    $('eval').textContent = st.energy + ' / ' + emax;
     $('bbar').style.width = (100 * t.budget_after / cfg.budget) + '%'; $('bval').textContent = fmt(t.budget_after) + ' left';
     const src = t.source === 'reflex' ? 'reflex' : t.source === 'idle' ? 'idle' : 'model';
     $('src').innerHTML = '<span class="chip ' + src + '">' + esc(src === 'model' ? 'model' + (t.source !== 'model' ? ' (' + t.source.replace(/_/g, ' ') + ')' : '') : src) + '</span>';

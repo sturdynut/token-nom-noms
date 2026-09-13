@@ -28,7 +28,11 @@ Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain
 
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | 16/50 | eaten by predator | -27 | claude | haiku | Matti Salokangas | 41,564 (+1,564 over) | 2597.8 | 1 | 6 | 0 | 0 | 0.169 | [20260913-125018-claude-haiku-seed1](20260913-125018-claude-haiku-seed1/) |
+| 1 | 50/50 | alive | +7 | claude | fable | Matti Salokangas | 15,793 | 315.9 | 16 | 5 | 49 | 0 | 0.445 | [20260913-143711-claude-fable-seed1](20260913-143711-claude-fable-seed1/) |
+| 1 | 50/50 | alive | +7 | claude | opus | Matti Salokangas | 18,621 | 372.4 | 13 | 5 | 49 | 0 | 0.277 | [20260913-143711-claude-opus-seed1](20260913-143711-claude-opus-seed1/) |
+| 1 | 50/50 | alive | +7 | claude | sonnet | Matti Salokangas | 30,259 | 605.2 | 10 | 7 | 47 | 0 | 0.222 | [20260913-143711-claude-sonnet-seed1](20260913-143711-claude-sonnet-seed1/) |
+| 1 | 16/50 | eaten by predator | -27 | claude | haiku (low effort) | Matti Salokangas | 41,564 (+1,564 over) | 2597.8 | 1 | 6 | 0 | 0 | 0.169 | [20260913-125018-claude-haiku-seed1](20260913-125018-claude-haiku-seed1/) |
+| 1 | 8/50 | eaten by predator | -35 | claude | haiku | Matti Salokangas | 9,268 | 1158.5 | 2 | 1 | 7 | 0 | 0.040 | [20260913-143711-claude-haiku-seed1](20260913-143711-claude-haiku-seed1/) |
 
 ## Other runs
 
@@ -37,7 +41,7 @@ benchmark rows above.
 
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 3 | 50/50 | alive | same | claude | haiku | Matti Salokangas | 47,519 | 950.4 | 15 | 7 | 48 | 0 | 0.203 | [20260910-094034-claude-haiku-seed3](20260910-094034-claude-haiku-seed3/) |
+| 3 | 50/50 | alive | same | claude | haiku (low effort) | Matti Salokangas | 47,519 | 950.4 | 15 | 7 | 48 | 0 | 0.203 | [20260910-094034-claude-haiku-seed3](20260910-094034-claude-haiku-seed3/) |
 | 1 | 44/50 | eaten by predator |  | claude | haiku |  | 42,759 | 971.8 | 14 | 5 | 43 | 0 | 0.193 | [20260910-091216-claude-haiku-seed1](20260910-091216-claude-haiku-seed1/) |
 | 3 | 20/50 | starved | -30 | ollama | qwen2.5:7b | Matti Salokangas | 11,106 | 555.3 | 0 | 17 | 16 | 6 | 0.000 | [20260910-094037-ollama-qwen2.5_7b-seed3](20260910-094037-ollama-qwen2.5_7b-seed3/) |
 | 1 | 20/50 | starved |  | ollama | llama3.2 |  | 41,312 | 2065.6 | 0 | 56 | 0 | 24 | 0.000 | [20260910-091219-ollama-llama3.2-seed1](20260910-091219-ollama-llama3.2-seed1/) |

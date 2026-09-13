@@ -1,0 +1,33 @@
+{
+  "format": 2,
+  "run_dir": "runs/20260913-143711-claude-haiku-seed1",
+  "by": "Matti Salokangas",
+  "runtime": "claude",
+  "model": "haiku",
+  "models_billed": [
+    "claude-haiku-4-5-20251001"
+  ],
+  "seed": 1,
+  "survived_ticks": 8,
+  "max_ticks": 50,
+  "alive": false,
+  "cause_of_death": "eaten by predator",
+  "food_eaten": 2,
+  "final_energy": 14,
+  "budget": 40000,
+  "tokens_spent": 9268,
+  "tokens_left": 30732,
+  "overdraft": 0,
+  "model_calls": 1,
+  "cost_usd": 0.0401,
+  "reflex_versions": 1,
+  "drifts": [],
+  "model_ticks": 1,
+  "reflex_ticks": 7,
+  "idle_ticks": 0,
+  "crisis_calls": 0,
+  "think_calls": 0,
+  "report_calls": 0,
+  "parse_errors": 0,
+  "call_errors": 0
+}

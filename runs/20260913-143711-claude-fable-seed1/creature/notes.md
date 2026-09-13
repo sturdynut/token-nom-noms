@@ -1,0 +1,1 @@
+Reflex v1 (Dijkstra food, pred veto<=1). OK t10 E26, t20 E30/35, t30 E33/35, t40 E38/40 adult. Only touch if stall/starve/pred-death risk seen in reports.

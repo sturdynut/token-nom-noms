@@ -52,6 +52,7 @@ class Ledger:
             "depth": depth,
             "runtime": runtime,
             "model": model,
+            "models_billed": getattr(res, "models", []),
             "system": system,
             "prompt": prompt,
             "response": res.text,

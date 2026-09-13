@@ -1,0 +1,1 @@
+Reflex: Dijkstra->nearest food; rocks blocked; pit/trap costed; pred danger (adj 40, d2 12). Fallback flee. Called only on 10-tick reports + energy<=5 crisis. t10 26/30, t20 32/35, t30 33/35, t40 37/40 -> rising, leave it alone. Keep report replies terse, no self-prompts. Only revisit if a report shows energy dropping two reports running, >1 predator, or empty food list.

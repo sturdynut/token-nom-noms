@@ -67,11 +67,11 @@ Scrub any run tick by tick. The spend strip along the bottom is the real scorebo
 bar color is who decided, bar height is tokens charged, and a report's cost is stacked
 on the tick it was filed. Dashed lines are world shifts.
 
-This is a paid run on seed 3. Amber towers are its mandatory strategy reports, the
-short green dashes below are the ticks its free reflex handled, and the difference
-between them is the project's central finding.
+This is Fable finishing seed 1 alive. One purple bar at the far left is the single
+thought that bought it a pathfinder. Everything after is the free reflex running, with
+amber towers where it was forced to file a report.
 
-[![A paid Claude run on seed 3, its reflex on version three after two world shifts, with report bars towering over the free reflex ticks](docs/screenshot-paid.png)](https://sturdynut.github.io/token-nom-noms/#run=2&tick=30)
+[![Fable surviving all fifty ticks of seed 1, one paid thought at the start and free reflex ticks for the rest](docs/screenshot-paid.png)](https://sturdynut.github.io/token-nom-noms/#run=10&tick=50)
 
 And this is what losing to free looks like. Six paid decisions, no reflex ever written,
 then ten grey idle ticks standing still until the predator arrives.
@@ -99,8 +99,9 @@ the world from each run's seed and logged actions and checks it against the log,
 runs it with the unit tests on every PR. See `CONTRIBUTING.md` for the four ways to take part.
 
 **The row to beat is free.** `--runtime baseline` plays one hand-written greedy reflex for
-zero tokens. It survives one of the five benchmark seeds, and so far it is beating every
-paid run on the board. Any paid run that does not beat
+zero tokens. It survives one of the five benchmark seeds. Every paid run has to beat it on
+the same seed to have earned anything, and the leaderboard's **vs free** column says
+whether it did. Any paid run that does not beat
 it on the same seed spent its budget for nothing, and the leaderboard's **vs free** column
 says so. Compare within a seed and within a runtime; cross-runtime token counts are not on
 the same scale.
@@ -197,6 +198,29 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
 
 ## What the runs have shown so far
 
+- **The better the model, the less it spent.** Four Claude models played seed 1 on identical
+  rules and budgets. Sonnet, Opus and Fable each wrote themselves a reflex on the very first
+  move and then coasted, all three surviving the full fifty ticks. Haiku died twice.
+
+  | model | ticks | food | tokens spent | model calls |
+  | --- | ---: | ---: | ---: | ---: |
+  | Fable | 50 | 16 | 15,793 | 5 |
+  | Opus | 50 | 13 | 18,621 | 5 |
+  | Sonnet | 50 | 10 | 30,259 | 7 |
+  | Haiku | 8 | 2 | 9,268 | 1 |
+  | free baseline | 43 | 3 | 0 | 0 |
+
+  Spend runs backwards against capability. Fable was both the cheapest survivor and the best
+  forager, on roughly half of Sonnet's budget.
+- **What separated them was one piece of code, written once.** Fable's tick-1 reflex is a
+  weighted Dijkstra search from every food source, with pits and traps priced into the edge
+  cost and a scoring function that backs away from predators. It never revised it. Haiku's
+  reflex walks toward the nearest food by straight-line distance and checks for rocks, but
+  never mentions the predator at all, which is what killed it at tick 8. Both agents paid for
+  exactly one call. One bought a pathfinder, the other bought a bug.
+- **Fable wrote deliberately compressed code**, with semicolons, lambdas and single-letter
+  names. Output tokens are billed, so terse code is cheaper code. Nothing in the rules asked
+  for that.
 - **The first paid run under the full ruleset lost to free by 27 ticks.** Claude haiku on
   seed 1, with terrain and drift, never wrote a reflex at all. It reasoned about each step
   individually, spent the whole 40,000 token budget in six ticks, then stood still with no

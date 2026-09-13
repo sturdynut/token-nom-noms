@@ -137,6 +137,7 @@ class Game:
         self.creature = Creature(os.path.join(self.run_dir, "creature"))
         self.rules = rules_text(cfg)
         self._last_crisis = -10 ** 9
+        self.models_seen = set()
         self.stats = {"model_ticks": 0, "reflex_ticks": 0, "idle_ticks": 0, "crisis_calls": 0,
                       "think_calls": 0, "report_calls": 0, "parse_errors": 0, "call_errors": 0}
         with open(os.path.join(self.run_dir, "config.json"), "w") as f:
@@ -154,6 +155,7 @@ class Game:
                                          model=self.runtime.model or "", system=system, prompt=prompt, res=res)
         self.last_calls.append({"tick": tick, "kind": kind, "prompt": prompt, "response": res.text,
                                 "charged": charge, "error": res.error})
+        self.models_seen.update(getattr(res, "models", []) or [])
         if res.error:
             self.stats["call_errors"] += 1
             self._say("  ! %s" % res.error)
@@ -299,6 +301,7 @@ class Game:
             "by": self.cfg.by,
             "runtime": self.runtime.name,
             "model": self.runtime.model,
+            "models_billed": sorted(self.models_seen),
             "seed": self.cfg.seed,
             "survived_ticks": w.tick_no,
             "max_ticks": self.cfg.ticks,

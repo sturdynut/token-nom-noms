@@ -11,9 +11,11 @@ import urllib.request
 
 class CallResult:
     def __init__(self, text="", input_tokens=0, output_tokens=0, cache_read=0, cache_write=0,
-                 cost_usd=None, latency_ms=0, error=None, raw=None, thinking_tokens=0):
+                 cost_usd=None, latency_ms=0, error=None, raw=None, thinking_tokens=0,
+                 models=None):
         self.text = text
         self.thinking_tokens = thinking_tokens
+        self.models = models or []
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
         self.cache_read = cache_read
@@ -79,6 +81,7 @@ class ClaudeRuntime(Runtime):
             cache_read=u.get("cache_read_input_tokens", 0),
             cache_write=u.get("cache_creation_input_tokens", 0),
             thinking_tokens=(u.get("output_tokens_details") or {}).get("thinking_tokens", 0),
+            models=sorted((d.get("modelUsage") or {}).keys()),
             cost_usd=d.get("total_cost_usd"),
             latency_ms=ms,
             raw=d,

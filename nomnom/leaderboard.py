@@ -24,6 +24,7 @@ def collect(runs_dir: str) -> list:
         s["_seed"] = c.get("seed")
         s["_reference"] = s.get("runtime") == "baseline"
         s["_terrain"] = c.get("terrain_density", 0.0)
+        s["_label"] = (s.get("model") or "") + (" (%s effort)" % c["effort"] if c.get("effort") else "")
         s["_benchmark"] = (not s["_reference"] and c.get("seed") in BENCHMARK_SEEDS
                            and c.get("budget") == 40000 and c.get("ticks") == 50
                            and s["_drift"] == 15 and s["_terrain"] == 0.12)
@@ -44,7 +45,7 @@ def _row(r, baseline=None):
         beat = "same" if d == 0 else ("+%d" % d if d > 0 else str(d))
     return "| %s | %d/%d | %s | %s | %s | %s | %s | %s | %s | %d | %d | %d | %d | %.3f | [%s](%s) |" % (
         r["_seed"], r["survived_ticks"], r["max_ticks"], "alive" if r["alive"] else r["cause_of_death"],
-        beat, r["runtime"], r.get("model") or "", r.get("by") or "", spend, r["_per_tick"],
+        beat, r["runtime"], r["_label"], r.get("by") or "", spend, r["_per_tick"],
         r["food_eaten"], r["model_calls"], r["reflex_ticks"], r.get("think_calls", 0),
         r.get("cost_usd") or 0, r["_dir"], r["_dir"] + "/")
 

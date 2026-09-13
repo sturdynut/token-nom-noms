@@ -225,6 +225,7 @@ class World:
             "traps_known": sorted(list(t) for t in self.known_traps),
             "food": sorted(list(f) for f in self.food),
             "energy": self.energy,
+            "max_energy": self.current_max_energy(),
             "alive": self.alive,
         }
 

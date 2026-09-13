@@ -42,7 +42,7 @@ def bar(value, total, width=20, color=GREEN):
 def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: list = None) -> str:
     st = absolute_state(entry)
     size = cfg.get("size", 10)
-    max_energy = cfg.get("max_energy", 30)
+    max_energy = st.get("max_energy") or cfg.get("max_energy", 30)
     budget = cfg.get("budget", 0)
     ticks = cfg.get("ticks", 0)
     food = {tuple(f) for f in st["food"]}

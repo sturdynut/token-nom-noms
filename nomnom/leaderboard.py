@@ -23,8 +23,10 @@ def collect(runs_dir: str) -> list:
         s["_drift"] = c.get("drift_every", 0)
         s["_seed"] = c.get("seed")
         s["_reference"] = s.get("runtime") == "baseline"
+        s["_terrain"] = c.get("terrain_density", 0.0)
         s["_benchmark"] = (not s["_reference"] and c.get("seed") in BENCHMARK_SEEDS
-                           and c.get("budget") == 40000 and c.get("ticks") == 50 and s["_drift"] == 15)
+                           and c.get("budget") == 40000 and c.get("ticks") == 50
+                           and s["_drift"] == 15 and s["_terrain"] == 0.12)
         # Tokens per tick is only meaningful next to the outcome it bought: a creature
         # that dies early on a small spend scores well on it and badly at the game.
         s["_per_tick"] = round(s["tokens_spent"] / max(1, s["survived_ticks"]), 1)
@@ -83,7 +85,8 @@ def write_leaderboard(runs_dir: str = "runs") -> str:
             lines.append(_row(refs[seed]))
 
     lines += ["", "## Benchmark runs", "",
-              "Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15.", "", HEAD, RULE]
+              "Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain 0.12.",
+              "", HEAD, RULE]
     if bench:
         for r in bench:
             lines.append(_row(r, refs.get(r["_seed"])))
@@ -92,8 +95,8 @@ def write_leaderboard(runs_dir: str = "runs") -> str:
 
     if other:
         lines += ["", "## Other runs", "",
-                  "Different settings, or recorded before world drift existed. Not comparable to",
-                  "the benchmark rows above.", "", HEAD, RULE]
+                  "Different settings, or recorded under an older ruleset. Not comparable to the",
+                  "benchmark rows above.", "", HEAD, RULE]
         for r in other:
             lines.append(_row(r, refs.get(r["_seed"]) if r["_drift"] else None))
 

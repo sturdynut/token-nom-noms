@@ -25,6 +25,7 @@ def main(argv=None):
     r.add_argument("--no-predator", action="store_true")
     r.add_argument("--drift-every", type=int, default=15, dest="drift_every", help="ticks between silent world shifts (0 disables)")
     r.add_argument("--crisis-energy", type=int, default=5, dest="crisis_energy", help="energy at or below which the model overrides the reflex (0 disables)")
+    r.add_argument("--terrain", type=float, default=0.12, dest="terrain_density", help="share of cells holding a rock, pit or hidden trap (0 for open ground)")
     r.add_argument("--timeout", type=int, default=180, help="seconds per model call")
     r.add_argument("--out", default="runs")
     r.add_argument("--quiet", action="store_true")
@@ -55,7 +56,8 @@ def main(argv=None):
         cfg = Config(runtime=a.runtime, model=a.model, budget=a.budget, ticks=a.ticks, seed=a.seed,
                      size=a.size, max_think=a.max_think, report_every=a.report_every,
                      predator=not a.no_predator, drift_every=a.drift_every,
-                     crisis_energy=a.crisis_energy, timeout=a.timeout, out=a.out, quiet=a.quiet,
+                     crisis_energy=a.crisis_energy, terrain_density=a.terrain_density,
+                     timeout=a.timeout, out=a.out, quiet=a.quiet,
                      watch=a.watch, effort=a.effort, by=a.by)
         runtime = make_runtime(a.runtime, a.model, a.timeout, a.effort)
         summary = Game(cfg, runtime).run()

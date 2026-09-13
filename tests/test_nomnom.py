@@ -192,6 +192,84 @@ class TestWorld(unittest.TestCase):
         self.assertEqual(w.creature, (0, 0))
 
 
+class TestTerrain(unittest.TestCase):
+    def _world(self, **kw):
+        kw.setdefault("terrain_density", 0.15)
+        return World(seed=11, **kw)
+
+    def test_open_ground_by_default(self):
+        w = World(seed=11)
+        self.assertEqual((w.rocks, w.pits, w.traps), (set(), set(), set()))
+
+    def test_terrain_is_generated_and_never_under_the_creature(self):
+        w = self._world()
+        self.assertTrue(w.rocks or w.pits or w.traps)
+        for group in (w.rocks, w.pits, w.traps):
+            self.assertNotIn(w.creature, group)
+            for p in w.predators:
+                self.assertNotIn(p, group)
+
+    def test_the_grid_stays_walkable(self):
+        for seed in range(1, 25):
+            w = World(seed=seed, terrain_density=0.2)
+            reachable = w._walkable_from(w.creature, w.rocks)
+            self.assertGreaterEqual(reachable, 0.75 * (w.size * w.size - len(w.rocks)),
+                                    "seed %d boxed the creature in" % seed)
+
+    def test_rocks_block_the_creature(self):
+        w = World(seed=11, initial_food=0, predator=False, drift_every=0)
+        w.creature = (5, 5)
+        w.rocks = {(5, 4)}
+        events = w.step("n")
+        self.assertEqual(w.creature, (5, 5))
+        self.assertIn("blocked by rock", events)
+
+    def test_pits_are_crossable_and_cost_energy(self):
+        w = World(seed=11, initial_food=0, predator=False, drift_every=0, pit_cost=6)
+        w.creature, w.pits = (5, 5), {(5, 4)}
+        before = w.energy
+        w.step("n")
+        self.assertEqual(w.creature, (5, 4))
+        self.assertEqual(w.energy, before - 6 - 1)  # pit, then the per-tick drain
+
+    def test_an_unsensed_trap_fires_and_is_remembered(self):
+        w = World(seed=11, initial_food=0, predator=False, drift_every=0, trap_cost=8)
+        w.creature, w.traps = (5, 5), {(5, 1)}
+        w.step("n")  # to (5,4): still two away, nothing sensed
+        self.assertNotIn((5, 1), w.known_traps)
+        before = w.energy
+        w.step("n")  # to (5,3): now adjacent-but-one; sensing happens at Chebyshev 1
+        w.step("n")  # to (5,2): senses the trap without firing it
+        self.assertIn((5, 1), w.known_traps)
+        self.assertIn((5, 1), w.traps, "sensing must not disarm the trap")
+        w.step("n")  # step onto it
+        self.assertNotIn((5, 1), w.traps)
+        self.assertLess(w.energy, before - 3)
+
+    def test_a_trap_stuns_a_predator_and_is_consumed(self):
+        w = World(seed=11, initial_food=0, drift_every=0, predator_every=1)
+        w.creature, w.predators, w.traps = (5, 5), [(3, 5)], {(4, 5)}
+        w.step("stay")
+        self.assertEqual(w.predators, [(4, 5)])
+        self.assertNotIn((4, 5), w.traps)
+        w.step("stay")
+        self.assertEqual(w.predators, [(4, 5)], "the stunned predator should lose a move")
+        w.step("stay")
+        self.assertEqual(w.predators, [(5, 5)])
+
+    def test_terrain_is_the_same_for_the_same_seed(self):
+        a, b = self._world(), self._world()
+        self.assertEqual((a.rocks, a.pits, a.traps), (b.rocks, b.pits, b.traps))
+
+    def test_only_sensed_traps_are_observable(self):
+        w = World(seed=11, initial_food=0, predator=False, drift_every=0)
+        w.creature = (5, 5)
+        w.traps = {(5, 4), (0, 0)}
+        w._sense_traps()
+        seen = {tuple(t) for t in w.observe()["traps_known"]}
+        self.assertEqual(seen, {(0, -1)}, "a distant trap must stay hidden")
+
+
 class TestGameLoop(unittest.TestCase):
     """End-to-end through the real tick loop, with the zero-cost baseline as the brain."""
 
@@ -234,7 +312,8 @@ class TestGameLoop(unittest.TestCase):
     def test_a_new_run_validates_strictly(self):
         import json as _json
         s = self._play()
-        cfg = _json.load(open(os.path.join(s["run_dir"], "config.json")))
+        with open(os.path.join(s["run_dir"], "config.json")) as f:
+            cfg = _json.load(f)
         self.assertGreaterEqual(cfg["format"], 2)
         from nomnom.validate import validate_run
         _, notes = validate_run(s["run_dir"])

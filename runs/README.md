@@ -16,29 +16,30 @@ never calls a model. This is the score every paid run has to beat.
 
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | 50/50 | alive |  | baseline | greedy | reference | 0 | 0.0 | 13 | 5 | 49 | 0 | 0.000 | [20260912-214948-baseline-greedy-seed1](20260912-214948-baseline-greedy-seed1/) |
-| 2 | 22/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 4 | 3 | 21 | 0 | 0.000 | [20260912-214949-baseline-greedy-seed2](20260912-214949-baseline-greedy-seed2/) |
-| 3 | 50/50 | alive |  | baseline | greedy | reference | 0 | 0.0 | 13 | 5 | 49 | 0 | 0.000 | [20260912-214950-baseline-greedy-seed3](20260912-214950-baseline-greedy-seed3/) |
-| 4 | 30/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 6 | 3 | 29 | 0 | 0.000 | [20260912-214951-baseline-greedy-seed4](20260912-214951-baseline-greedy-seed4/) |
-| 5 | 23/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 5 | 3 | 22 | 0 | 0.000 | [20260912-214952-baseline-greedy-seed5](20260912-214952-baseline-greedy-seed5/) |
+| 1 | 43/50 | starved |  | baseline | greedy | reference | 0 | 0.0 | 3 | 6 | 41 | 0 | 0.000 | [20260913-103807-baseline-greedy-seed1](20260913-103807-baseline-greedy-seed1/) |
+| 2 | 34/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 7 | 4 | 33 | 0 | 0.000 | [20260913-103808-baseline-greedy-seed2](20260913-103808-baseline-greedy-seed2/) |
+| 3 | 50/50 | alive |  | baseline | greedy | reference | 0 | 0.0 | 10 | 5 | 49 | 0 | 0.000 | [20260913-103809-baseline-greedy-seed3](20260913-103809-baseline-greedy-seed3/) |
+| 4 | 18/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 6 | 2 | 17 | 0 | 0.000 | [20260913-103810-baseline-greedy-seed4](20260913-103810-baseline-greedy-seed4/) |
+| 5 | 18/50 | eaten by predator |  | baseline | greedy | reference | 0 | 0.0 | 2 | 2 | 17 | 0 | 0.000 | [20260913-103810-baseline-greedy-seed5](20260913-103810-baseline-greedy-seed5/) |
 
 ## Benchmark runs
 
-Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15.
+Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain 0.12.
+
+| seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
+| ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| | | no benchmark runs yet | | | | | | | | | | | | |
+
+## Other runs
+
+Different settings, or recorded under an older ruleset. Not comparable to the
+benchmark rows above.
 
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 3 | 50/50 | alive | same | claude | haiku | Matti Salokangas | 47,519 | 950.4 | 15 | 7 | 48 | 0 | 0.203 | [20260910-094034-claude-haiku-seed3](20260910-094034-claude-haiku-seed3/) |
-| 3 | 20/50 | starved | -30 | ollama | qwen2.5:7b | Matti Salokangas | 11,106 | 555.3 | 0 | 17 | 16 | 6 | 0.000 | [20260910-094037-ollama-qwen2.5_7b-seed3](20260910-094037-ollama-qwen2.5_7b-seed3/) |
-
-## Other runs
-
-Different settings, or recorded before world drift existed. Not comparable to
-the benchmark rows above.
-
-| seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
-| ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 | 44/50 | eaten by predator |  | claude | haiku |  | 42,759 | 971.8 | 14 | 5 | 43 | 0 | 0.193 | [20260910-091216-claude-haiku-seed1](20260910-091216-claude-haiku-seed1/) |
+| 3 | 20/50 | starved | -30 | ollama | qwen2.5:7b | Matti Salokangas | 11,106 | 555.3 | 0 | 17 | 16 | 6 | 0.000 | [20260910-094037-ollama-qwen2.5_7b-seed3](20260910-094037-ollama-qwen2.5_7b-seed3/) |
 | 1 | 20/50 | starved |  | ollama | llama3.2 |  | 41,312 | 2065.6 | 0 | 56 | 0 | 24 | 0.000 | [20260910-091219-ollama-llama3.2-seed1](20260910-091219-ollama-llama3.2-seed1/) |
 
 ## What each run folder holds

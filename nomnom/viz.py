@@ -19,8 +19,12 @@ def absolute_state(entry: dict) -> dict:
     o = entry["obs"]
     px, py = o["pos"]
     preds = o.get("predators") if o.get("predators") is not None else ([o["predator"]] if o.get("predator") else [])
+    abso = lambda k: [[px + c[0], py + c[1]] for c in (o.get(k) or [])]  # noqa: E731
     return {
         "pos": [px, py],
+        "rocks": abso("rocks"),
+        "pits": abso("pits"),
+        "traps_known": abso("traps_known"),
         "predator": [px + o["predator"][0], py + o["predator"][1]] if o.get("predator") else None,
         "predators": [[px + p[0], py + p[1]] for p in preds],
         "food": [[px + f[0], py + f[1]] for f in o.get("food", [])],
@@ -43,6 +47,9 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
     ticks = cfg.get("ticks", 0)
     food = {tuple(f) for f in st["food"]}
     preds = {tuple(p) for p in (st.get("predators") or ([st["predator"]] if st.get("predator") else []))}
+    rocks = {tuple(c) for c in (st.get("rocks") or [])}
+    pits = {tuple(c) for c in (st.get("pits") or [])}
+    traps = {tuple(c) for c in (st.get("traps_known") or [])}
     pos = tuple(st["pos"])
     trail = {tuple(p) for p in (trail or [])}
 
@@ -58,6 +65,12 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
                 row.append(RED + BOLD + "P" + RESET)
             elif c in food:
                 row.append(YELLOW + "*" + RESET)
+            elif c in rocks:
+                row.append(DIM + "#" + RESET)
+            elif c in pits:
+                row.append(MAGENTA + "O" + RESET)
+            elif c in traps:
+                row.append(RED + "^" + RESET)
             elif c in trail:
                 row.append(DIM + "·" + RESET)
             else:

@@ -10,12 +10,14 @@ WORLD
 - Stepping onto food eats it: +{food_value} energy. New food appears every {food_every} ticks.
 - A predator hunts you. It moves one step toward you every {predator_every} ticks. If it reaches your cell you die.
 - Actions: "n" (dy-1), "s" (dy+1), "e" (dx+1), "w" (dx-1), "stay".
+- The ground is not empty. obs["rocks"] are walls: you cannot enter them and neither can a predator, and a move into one is wasted. obs["pits"] cost {pit_cost} energy to cross and you can see all of them, so crossing one is a choice, not an accident. Straight-line distance therefore lies; the short way round a rock may be longer than it looks.
+- Traps are invisible. You notice one only when it is in the eight cells around you, and then it joins obs["traps_known"] for good. Stepping on one you have not noticed costs {trap_cost} energy. A predator that steps on a trap loses its next move. Nothing else in this world rewards remembering where you have been.
 - The world shifts without notice every so often. Predator speed, predator behaviour, the number of predators, and the food supply can all change. Anything you infer or hard-code can go stale. You are never told when it happens.
 
 TOKENS
 - Every call to you costs tokens: all input plus all output. Input includes this rules text, the observation, your notes, and every self-prompt and reply already made this tick. Nothing you are shown is free; seeing your budget is free only in that you are never charged a separate call to ask for it.
 - When your budget hits 0 you are never called again. Only your reflex keeps acting. With no reflex the creature stands still and starves.
-- A reflex is Python you write: `def act(obs): ...` returning an action string or None. It runs every tick BEFORE you are called, at zero token cost. If it returns an action you are not called that tick. obs is the observation dict shown below (keys: tick, pos, grid, energy, stage, food, predator = nearest or null, predators = all, budget).
+- A reflex is Python you write: `def act(obs): ...` returning an action string or None. It runs every tick BEFORE you are called, at zero token cost. If it returns an action you are not called that tick. obs is the observation dict shown below (keys: tick, pos, grid, energy, max_energy, stage, food, predator = nearest or null, predators = all, rocks, pits, traps_known, pit_cost, trap_cost, budget).
 - You may prompt yourself. Put a prompt in "think"; it is sent to you verbatim with no rules attached, the reply comes back, and you are asked again. Each self-prompt is a paid call. Max {max_think} per tick.
 - Every {report_every} ticks you must file a short report on your token strategy. That call is paid too, and you cannot decline it. A report reply may also carry "notes" and "reflex", exactly as a tick reply does; for a tick your reflex handles, the report is your only chance to change either.
 - If your energy falls to {crisis_energy} or below and you can still afford a call, you are called even when your reflex returned an action. A reflex cannot notice that it is losing. These crisis calls are paid and are capped at one every {crisis_cooldown} ticks.
@@ -49,6 +51,8 @@ NOTES
 
 def rules_text(cfg) -> str:
     return RULES.format(
+        pit_cost=cfg.pit_cost,
+        trap_cost=cfg.trap_cost,
         crisis_energy=cfg.crisis_energy,
         crisis_cooldown=cfg.crisis_cooldown,
         size=cfg.size,

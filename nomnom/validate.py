@@ -77,13 +77,17 @@ def validate_run(run_dir: str):
     w = World(seed=c["seed"], size=c["size"], start_energy=c["start_energy"], max_energy=c["max_energy"],
               food_value=c["food_value"], initial_food=c["initial_food"], food_every=c["food_every"],
               predator=c["predator"], predator_every=c["predator_every"],
-              drift_every=c.get("drift_every", 0), stage_growth=c.get("stage_growth", False))
+              drift_every=c.get("drift_every", 0), stage_growth=c.get("stage_growth", False),
+              terrain_density=c.get("terrain_density", 0.0), pit_cost=c.get("pit_cost", 6),
+              trap_cost=c.get("trap_cost", 8))
     norm = (lambda v: v) if strict else _cells
     for t in ticks:
         expected_obs = t.get("obs")
         if expected_obs:
             got = w.observe()
-            for k in ("pos", "energy", "food", "predator"):
+            for k in ("pos", "energy", "food", "predator", "rocks", "pits", "traps_known"):
+                if k not in expected_obs:
+                    continue  # the key postdates this run's log shape
                 if norm(got.get(k)) != norm(expected_obs.get(k)):
                     problems.append("tick %d: %s was %s in the log, replay gives %s"
                                     % (t["tick"], k, expected_obs.get(k), got.get(k)))

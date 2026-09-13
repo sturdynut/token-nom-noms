@@ -71,6 +71,7 @@ TEMPLATE = r"""<title>Token Nom Noms</title>
   --model:#5B4FC9; --model-soft:#E5E2F7; --reflex:#2E8B57; --reflex-soft:#DDEFE4; --idle:#8A9490;
   --predator:#C8383A; --food:#A8790F; --food-fill:#E3B33E; --grid:#E1E7E1; --trail:#B9C6BC;
   --creature:#2E8B57; --creature-dark:#1F6640; --eye:#F7FAF7; --focus:#5B4FC9;
+  --rock:#AFBCB2; --rock-edge:#8C9B91; --pit:#C3CBD6; --pit-edge:#8E9AAA; --trap:#C8383A;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -78,6 +79,7 @@ TEMPLATE = r"""<title>Token Nom Noms</title>
     --model:#7B72DC; --model-soft:#2A2748; --reflex:#48A874; --reflex-soft:#1F3A2B; --idle:#5E6963;
     --predator:#E0555A; --food:#B98A22; --food-fill:#D9A83A; --grid:#232C29; --trail:#33413B;
     --creature:#48A874; --creature-dark:#2D7A50; --eye:#0F1512; --focus:#9D95EE;
+    --rock:#3A453F; --rock-edge:#4E5B53; --pit:#2A3340; --pit-edge:#3E4A5A; --trap:#E0555A;
   }
 }
 :root[data-theme="dark"]{
@@ -85,6 +87,7 @@ TEMPLATE = r"""<title>Token Nom Noms</title>
   --model:#7B72DC; --model-soft:#2A2748; --reflex:#48A874; --reflex-soft:#1F3A2B; --idle:#5E6963;
   --predator:#E0555A; --food:#B98A22; --food-fill:#D9A83A; --grid:#232C29; --trail:#33413B;
   --creature:#48A874; --creature-dark:#2D7A50; --eye:#0F1512; --focus:#9D95EE;
+  --rock:#3A453F; --rock-edge:#4E5B53; --pit:#2A3340; --pit-edge:#3E4A5A; --trap:#E0555A;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;padding-block:20px 48px;padding-inline:clamp(16px,3vw,40px)}
@@ -139,6 +142,8 @@ canvas{display:block;width:100%;aspect-ratio:1/1;max-width:100%;border-radius:6p
 .qa .q::before{content:"self-prompt ";color:var(--model);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
 .qa .a{color:var(--ink-2)}
 .qa .a::before{content:"reply ";color:var(--ink-3);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.qa .rep{color:var(--food)}
+.qa .rep::before{content:"report ";color:var(--food);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
 .empty{color:var(--ink-3);font-style:italic}
 .ledger{margin-top:28px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px}
 .ledger .head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -175,6 +180,9 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       <span><i class="sw round" style="background:var(--creature)"></i>creature</span>
       <span><i class="sw dia" style="background:var(--predator)"></i>predator</span>
       <span><i class="sw round" style="background:var(--food-fill);border:1px solid var(--food)"></i>food</span>
+      <span><i class="sw" style="background:var(--rock);border:1px solid var(--rock-edge)"></i>rock</span>
+      <span><i class="sw round" style="background:var(--pit);border:1px solid var(--pit-edge)"></i>pit</span>
+      <span><i class="sw" style="background:transparent;color:var(--trap);font-weight:700;font-size:13px;line-height:12px;text-align:center">&times;</i>trap found</span>
       <span><i class="sw round" style="border:2px solid var(--model)"></i>paid thought this tick</span>
     </div>
   </div>
@@ -261,6 +269,30 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     ctx.strokeStyle = css('--grid'); ctx.lineWidth = Math.max(1, devicePixelRatio);
     for (let k = 0; k <= n; k++) { const p = Math.round(k * cell) + 0.5; ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, H); ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke(); }
     const cx = c => (c + 0.5) * cell;
+    // Terrain sits under everything: walls, visible pits, and traps already found.
+    (st.rocks || []).forEach(([x, y]) => {
+      ctx.fillStyle = css('--rock'); ctx.strokeStyle = css('--rock-edge');
+      ctx.lineWidth = Math.max(1, cell * 0.03);
+      const p = cell * 0.1, side = cell - 2 * p;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x * cell + p, y * cell + p, side, side, cell * 0.14);
+      else ctx.rect(x * cell + p, y * cell + p, side, side);
+      ctx.fill(); ctx.stroke();
+    });
+    (st.pits || []).forEach(([x, y]) => {
+      ctx.fillStyle = css('--pit'); ctx.strokeStyle = css('--pit-edge');
+      ctx.lineWidth = Math.max(1, cell * 0.03);
+      ctx.beginPath(); ctx.ellipse(cx(x), cx(y), cell * 0.34, cell * 0.26, 0, 0, 7);
+      ctx.fill(); ctx.stroke();
+    });
+    (st.traps_known || []).forEach(([x, y]) => {
+      ctx.strokeStyle = css('--trap'); ctx.lineWidth = Math.max(1.5, cell * 0.055);
+      const r = cell * 0.24;
+      ctx.beginPath();
+      ctx.moveTo(cx(x) - r, cx(y) - r); ctx.lineTo(cx(x) + r, cx(y) + r);
+      ctx.moveTo(cx(x) + r, cx(y) - r); ctx.lineTo(cx(x) - r, cx(y) + r);
+      ctx.stroke();
+    });
     // trail
     const trail = run.ticks.slice(Math.max(0, i - 8), i);
     trail.forEach((tt, k) => { const [x, y] = tt.state.pos; ctx.fillStyle = css('--trail'); ctx.globalAlpha = 0.25 + 0.75 * (k + 1) / (trail.length + 1); ctx.beginPath(); ctx.arc(cx(x), cx(y), cell * 0.09, 0, 7); ctx.fill(); });
@@ -302,7 +334,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('notes').innerHTML = t.notes ? esc(t.notes) : '<span class="empty">none yet</span>';
     const th = callsAt(t.tick, 'think'), rp = callsAt(t.tick, 'report');
     let html = th.map(c => '<div class="q">' + esc(c.prompt) + '</div><div class="a">' + esc(c.response || c.error) + '</div>').join('');
-    if (rp.length) html += rp.map(c => '<div class="a" style="color:var(--food)">report filed this tick · ' + fmt(c.charged) + ' tokens</div>').join('');
+    if (rp.length) html += rp.map(c => '<div class="rep">filed this tick, ' + fmt(c.charged) + ' tokens</div>').join('');
     $('thoughts').innerHTML = html || '<span class="empty">none</span>';
     $('scrub').value = t.tick;
     draw(); markStrip(); syncHash();

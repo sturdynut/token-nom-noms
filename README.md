@@ -2,7 +2,7 @@
 
 **Watch the runs:** https://sturdynut.github.io/token-nom-noms/
 
-[![Claude haiku's creature at tick 31, running on its fourth reflex after two world shifts](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=2&tick=31)
+[![The free hand-written reflex stalled beside a rock on seed 1, food all around it, two traps already found](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=4&tick=30)
 
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.
@@ -14,6 +14,10 @@ the token-efficiency strategies the agents invent under scarcity.
 One agent, one creature, fifty ticks, and a log you can read end to end.
 
 - A 10x10 grid with food, one slow predator, and hunger.
+- **The ground is not empty.** Rocks are walls that stop the creature and the predator
+  both. Pits are visible and cost energy to cross, so crossing one is a choice. Traps are
+  invisible until they are in the eight cells around you, and stepping on an unnoticed one
+  hurts. A predator that hits a trap loses its next move.
 - Each tick the harness hands the agent its observation, its notes from last
   tick, and its remaining budget. The budget never costs a separate call to look at,
   but nothing shown to the agent is free: the observation, the notes and every
@@ -70,7 +74,7 @@ the world from each run's seed and logged actions and checks it against the log,
 runs it with the unit tests on every PR. See `CONTRIBUTING.md` for the four ways to take part.
 
 **The row to beat is free.** `--runtime baseline` plays one hand-written greedy reflex for
-zero tokens. It survives two of the five benchmark seeds. Any paid run that does not beat
+zero tokens. It survives one of the five benchmark seeds. Any paid run that does not beat
 it on the same seed spent its budget for nothing, and the leaderboard's **vs free** column
 says so. Compare within a seed and within a runtime; cross-runtime token counts are not on
 the same scale.
@@ -137,6 +141,34 @@ and an `overdraft` field.
 - **mock**: a scripted greedy brain that exercises notes, think, reflex and reports
   without spending anything.
 
+## Why terrain
+
+Straight-line distance is the whole of a naive reflex: step toward the nearest food, run
+from the nearest predator. Rocks make that heuristic lie, because the short way round is
+not the short way there, and the reflex walks into a wall and stalls. Traps make the map
+itself uncertain, which is the only thing in this world that rewards remembering where you
+have been, so the agent's notes stop being decorative and start being a map.
+
+Both pressures leave the free option intact, which is the point. A better reflex that
+routes around rocks and avoids known traps is still writable and still costs nothing to
+run. Terrain widens the gap between a careless reflex and a careful one rather than
+abolishing reflexes, so the paid-versus-free decision the game is built on survives.
+
+The effect is real but not monotonic, because rocks shelter the creature as readily as
+they obstruct it. Measured with the free baseline across the five benchmark seeds:
+
+| terrain density | seeds survived |
+| ---: | ---: |
+| 0.00 | 2 of 5 |
+| 0.08 | 1 of 5 |
+| 0.12 | 1 of 5 |
+| 0.18 | 3 of 5 |
+| 0.25 | 1 of 5 |
+
+Five seeds is a small sample and these numbers are noisy. The default is 0.12 because it
+is the hardest setting for a naive reflex here and stays readable on a 10x10 grid. Pass
+`--terrain 0` for open ground.
+
 ## What the runs have shown so far
 
 - **A report about saving tokens cost 10,985 of them.** Across both Claude runs, roughly
@@ -172,6 +204,8 @@ and an `overdraft` field.
 
 ## Next
 
+- A second agent playing the predator, on its own budget, so the pressure adapts instead
+  of running to a schedule. Partial sight on both sides is what would make it need a brain.
 - Token income from eating so burn rate versus investment becomes a real economy.
 - Evolution gated on survival plus skills, not just age. Stages currently only raise the
   energy ceiling.

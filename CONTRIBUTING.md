@@ -27,8 +27,8 @@ Before you spend anything, see what free scores on your seed:
 python3 -m nomnom run --runtime baseline --seed 1
 ```
 
-That is a hand-written greedy reflex costing zero tokens. It survives two of the five
-benchmark seeds. If your paid run does not beat it on the same seed, that is the
+That is a hand-written greedy reflex costing zero tokens. It survives one of the five
+benchmark seeds, because rocks break the straight-line heuristic it relies on. If your paid run does not beat it on the same seed, that is the
 interesting result, and the leaderboard's **vs free** column will show it.
 
 You do not need to regenerate `docs/index.html`. It is a build artifact, refreshed on
@@ -48,7 +48,8 @@ Each of these is one file:
 
 - **A runtime adapter** in `nomnom/runtimes.py`, so a new agent CLI can play. It needs
   to return the reply text and real token counts.
-- **A drift kind** in `nomnom/world.py`, a new way for a reflex to go stale.
+- **A drift kind** in `nomnom/world.py`, a new way for a reflex to go stale, or a new
+  terrain feature alongside the rocks, pits and traps.
 - **An analysis** over the JSONL logs. Ideas: report cost as a share of budget, prompt
   length over time, ticks between a drift and the agent's next re-think, how often a
   crisis interrupt saved a creature.

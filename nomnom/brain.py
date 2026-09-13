@@ -34,6 +34,9 @@ class Config:
         self.predator_every = 2
         self.drift_every = 15
         self.stage_growth = True
+        self.terrain_density = 0.12
+        self.pit_cost = 6
+        self.trap_cost = 8
         self.crisis_energy = 5
         self.crisis_cooldown = 5
         self.max_think = 3
@@ -127,7 +130,8 @@ class Game:
             seed=cfg.seed, size=cfg.size, start_energy=cfg.start_energy, max_energy=cfg.max_energy,
             food_value=cfg.food_value, initial_food=cfg.initial_food, food_every=cfg.food_every,
             predator=cfg.predator, predator_every=cfg.predator_every, drift_every=cfg.drift_every,
-            stage_growth=cfg.stage_growth,
+            stage_growth=cfg.stage_growth, terrain_density=cfg.terrain_density,
+            pit_cost=cfg.pit_cost, trap_cost=cfg.trap_cost,
         )
         self.ledger = Ledger(cfg.budget, self.run_dir)
         self.creature = Creature(os.path.join(self.run_dir, "creature"))

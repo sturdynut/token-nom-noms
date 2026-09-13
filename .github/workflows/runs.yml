@@ -2,10 +2,10 @@ name: runs
 
 on:
   pull_request:
-    paths: ["runs/**", "nomnom/**"]
+    paths: ["runs/**", "nomnom/**", "tests/**", ".github/workflows/**"]
   push:
     branches: [main]
-    paths: ["runs/**", "nomnom/**"]
+    paths: ["runs/**", "nomnom/**", "tests/**", ".github/workflows/**"]
 
 jobs:
   validate:
@@ -15,16 +15,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
       - name: Validate every run folder
         run: python3 -m nomnom validate
-      - name: Leaderboard and replay page are current
+      - name: The replay page still builds
         run: |
           python3 -m nomnom leaderboard
-          python3 -m nomnom html $(ls -d runs/*/) -o docs/index.html
-          git diff --exit-code -- runs/README.md docs/index.html || {
-            echo "::error::runs/README.md or docs/index.html is stale. Run: python3 -m nomnom leaderboard && python3 -m nomnom html \$(ls -d runs/*/) -o docs/index.html"
-            exit 1
-          }
+          python3 -m nomnom html $(ls -d runs/*/) -o /tmp/index.html
+          test -s /tmp/index.html
 
   rebuild:
     if: github.event_name == 'push'

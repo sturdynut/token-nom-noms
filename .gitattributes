@@ -1,0 +1,5 @@
+# Built by `python3 -m nomnom html` and refreshed on main by the runs workflow.
+# Contributors never need to regenerate it; marking it generated keeps it out of
+# pull request diffs and off the language stats.
+docs/index.html linguist-generated=true -diff
+docs/screenshot.png binary

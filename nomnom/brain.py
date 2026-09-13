@@ -11,6 +11,12 @@ from .reflex import run_reflex
 from .world import ACTIONS, World
 
 
+# Bumped when a change to the world or the log shape makes older runs unreplayable by
+# this code. Format 1 runs predate the deterministic tie-break in World.observe, so their
+# logged cell ordering cannot be reproduced here; `validate` grandfathers them and says so.
+LOG_FORMAT = 2
+
+
 class Config:
     def __init__(self, **kw):
         self.runtime = "mock"
@@ -27,6 +33,9 @@ class Config:
         self.predator = True
         self.predator_every = 2
         self.drift_every = 15
+        self.stage_growth = True
+        self.crisis_energy = 5
+        self.crisis_cooldown = 5
         self.max_think = 3
         self.report_every = 10
         self.timeout = 180
@@ -118,15 +127,17 @@ class Game:
             seed=cfg.seed, size=cfg.size, start_energy=cfg.start_energy, max_energy=cfg.max_energy,
             food_value=cfg.food_value, initial_food=cfg.initial_food, food_every=cfg.food_every,
             predator=cfg.predator, predator_every=cfg.predator_every, drift_every=cfg.drift_every,
+            stage_growth=cfg.stage_growth,
         )
         self.ledger = Ledger(cfg.budget, self.run_dir)
         self.creature = Creature(os.path.join(self.run_dir, "creature"))
         self.rules = rules_text(cfg)
-        self.stats = {"model_ticks": 0, "reflex_ticks": 0, "idle_ticks": 0,
+        self._last_crisis = -10 ** 9
+        self.stats = {"model_ticks": 0, "reflex_ticks": 0, "idle_ticks": 0, "crisis_calls": 0,
                       "think_calls": 0, "report_calls": 0, "parse_errors": 0, "call_errors": 0}
         with open(os.path.join(self.run_dir, "config.json"), "w") as f:
-            json.dump({"config": cfg.as_dict(), "runtime": runtime.name, "model": runtime.model,
-                       "rules": self.rules}, f, indent=2)
+            json.dump({"format": LOG_FORMAT, "config": cfg.as_dict(), "runtime": runtime.name,
+                       "model": runtime.model, "rules": self.rules}, f, indent=2)
 
     # ---- model plumbing ------------------------------------------------
 
@@ -135,10 +146,10 @@ class Game:
 
     def _call(self, kind: str, system: str, prompt: str, tick: int, depth: int = 0):
         res = self.runtime.call(system, prompt)
+        charge = self.ledger.record_call(tick=tick, kind=kind, depth=depth, runtime=self.runtime.name,
+                                         model=self.runtime.model or "", system=system, prompt=prompt, res=res)
         self.last_calls.append({"tick": tick, "kind": kind, "prompt": prompt, "response": res.text,
-                                "charged": self.ledger.charge_for(res), "error": res.error})
-        self.ledger.record_call(tick=tick, kind=kind, depth=depth, runtime=self.runtime.name,
-                                model=self.runtime.model or "", system=system, prompt=prompt, res=res)
+                                "charged": charge, "error": res.error})
         if res.error:
             self.stats["call_errors"] += 1
             self._say("  ! %s" % res.error)
@@ -184,7 +195,7 @@ class Game:
 
     def _report(self, obs: dict, tick: int):
         self.stats["report_calls"] += 1
-        prompt = report_prompt(obs, self.ledger, self.creature.notes, tick)
+        prompt = report_prompt(obs, self.ledger, self.creature.notes, tick, self.creature.reflex_src)
         res = self._call("report", self.rules, prompt, tick)
         parsed = extract_json(res.text) if not res.error else None
         if parsed:
@@ -229,13 +240,28 @@ class Game:
                     self.creature.reflex_last = "None"
                     action = None
 
+            # A reflex always returns an action, so a creature running one can starve with
+            # its budget untouched: nothing in the loop ever forces a spend. When energy is
+            # critical and a call is still affordable, override the reflex and think.
+            if (source == "reflex" and self.cfg.crisis_energy
+                    and obs["energy"] <= self.cfg.crisis_energy
+                    and self.ledger.remaining > 0
+                    and tick - self._last_crisis >= self.cfg.crisis_cooldown):
+                self._last_crisis = tick
+                self.stats["crisis_calls"] += 1
+                self._say("  crisis: energy %d, overriding reflex" % obs["energy"])
+                action, source = self._decide_with_model(obs, tick)
+                source = "crisis" if source == "model" else source
+
             if action is None and self.ledger.remaining > 0:
                 action, source = self._decide_with_model(obs, tick)
             if action is None:
                 action, source = "stay", "idle"
 
             events = w.step(action)
-            self.stats["reflex_ticks" if source == "reflex" else "model_ticks" if source.startswith("model") or source in ("parse_error", "think_limit", "budget_exhausted_mid_tick") else "idle_ticks"] += 1
+            bucket = ("reflex_ticks" if source == "reflex"
+                      else "idle_ticks" if source == "idle" else "model_ticks")
+            self.stats[bucket] += 1
             tick_cost = budget_before - self.ledger.remaining
             self.last_calls = [c for c in self.last_calls if c["tick"] == tick]
             self._last_tick_entry = entry = {
@@ -264,6 +290,7 @@ class Game:
                 self._report(obs2, tick)
 
         summary = {
+            "format": LOG_FORMAT,
             "run_dir": self.run_dir,
             "by": self.cfg.by,
             "runtime": self.runtime.name,
@@ -277,7 +304,8 @@ class Game:
             "final_energy": w.energy,
             "budget": self.cfg.budget,
             "tokens_spent": self.ledger.spent,
-            "tokens_left": self.ledger.remaining,
+            "tokens_left": self.cfg.budget - self.ledger.spent,
+            "overdraft": self.ledger.overdraft,
             "model_calls": self.ledger.calls,
             "cost_usd": round(self.ledger.cost_usd, 4),
             "reflex_versions": self.creature.reflex_version,

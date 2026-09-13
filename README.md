@@ -15,19 +15,28 @@ One agent, one creature, fifty ticks, and a log you can read end to end.
 
 - A 10x10 grid with food, one slow predator, and hunger.
 - Each tick the harness hands the agent its observation, its notes from last
-  tick, and its remaining budget (always visible, always free).
+  tick, and its remaining budget. The budget never costs a separate call to look at,
+  but nothing shown to the agent is free: the observation, the notes and every
+  self-prompt so far are all re-sent as input and charged.
 - The agent replies with a JSON action. It may also:
   - write **notes** that it will receive next tick (its own context, its own cost),
   - install a **reflex**: Python `act(obs)` that runs every tick before the model
     at zero token cost, so a good reflex means the model is never called,
   - **think**: send a prompt to itself. The reply comes back and it is asked again.
     Self-prompts are paid calls, capped per tick.
-- Every 10 ticks the agent files a short report on its token strategy. That call is paid too.
+- Every 10 ticks the agent files a short report on its token strategy. That call is
+  paid and cannot be declined. The report shows the agent its own reflex, and a report
+  reply may replace the notes or the reflex, which for a creature running a reflex is
+  its only chance to change anything.
+- **Crisis interrupt.** A reflex always returns an action, so a creature running one can
+  starve with its budget untouched. When energy falls to 5 or below and a call is still
+  affordable, the model is called anyway, at most once every 5 ticks.
 - **The world drifts.** Every 15 ticks one rule silently changes: predators speed up, food
   gets scarce, a second predator appears, or predators start camping food instead of
   chasing. The agent is told that shifts happen, never when or what. A reflex written at
   tick 1 goes stale, so the real decision is when a re-think is worth paying for.
 - When the budget hits zero the model is never called again. Only the reflex keeps acting.
+- Growing up raises the energy ceiling: hatchling +0, juvenile +5, adult +10.
 
 Every model call is logged verbatim: system prompt, prompt, response, token counts,
 charge, and budget before and after. Self-reports are separate from telemetry, so
@@ -56,17 +65,22 @@ is tokens charged. Both views read only the run logs, never the simulation.
 2. `python3 -m nomnom leaderboard` to refresh the table.
 3. Open a PR with the new run folder. Keep the logs intact; the prompts and reports are the point.
 
-Benchmark seeds are 1 through 5 on the default rules. `python3 -m nomnom validate` replays
-every run from its seed and checks the summary, and CI runs it on each PR. See
-`CONTRIBUTING.md` for the four ways to take part.
+Benchmark seeds are 1 through 5 on the default rules. `python3 -m nomnom validate` rebuilds
+the world from each run's seed and logged actions and checks it against the log, and CI
+runs it with the unit tests on every PR. See `CONTRIBUTING.md` for the four ways to take part.
 
-Compare within a runtime first. Cross-runtime token counts are not on the same scale.
+**The row to beat is free.** `--runtime baseline` plays one hand-written greedy reflex for
+zero tokens. It survives two of the five benchmark seeds. Any paid run that does not beat
+it on the same seed spent its budget for nothing, and the leaderboard's **vs free** column
+says so. Compare within a seed and within a runtime; cross-runtime token counts are not on
+the same scale.
 
 ## Run it
 
 No dependencies beyond Python 3.9+.
 
 ```
+python3 -m nomnom run --runtime baseline                   # hand-written reflex, zero tokens, the row to beat
 python3 -m nomnom run --runtime mock                       # scripted brain, no LLM, for testing
 python3 -m nomnom run --runtime claude --model haiku       # Claude Code in headless mode
 python3 -m nomnom run --runtime ollama --model llama3.2    # local model via Ollama
@@ -86,8 +100,8 @@ Each run writes to `runs/<timestamp>-<runtime>-<model>-seed<n>/`:
 | `reports.jsonl` | the agent's strategy reports |
 | `creature/notes.md` | the agent's current self-authored notes |
 | `creature/reflex.py` | the agent's current reflex, plus every prior version |
-| `summary.json` | survival, food, tokens, calls, reflex ticks, self-prompts, dollar cost, who ran it |
-| `config.json` | full config and the exact rules text the agent saw |
+| `summary.json` | survival, food, tokens, calls, reflex ticks, self-prompts, dollar cost, any overdraft, who ran it |
+| `config.json` | log format version, full config, and the exact rules text the agent saw |
 
 ## Token accounting
 
@@ -99,6 +113,15 @@ are disabled, so its per-call overhead is roughly 440 tokens rather than 70k+.
 Runtimes are not comparable on raw tokens: different tokenizers, different overheads,
 and a local model is free at the margin. Treat each runtime as its own league.
 
+**Thinking tokens are charged.** They arrive inside the output count, so extended
+reasoning is billed at full price. In one 50-tick run, 34,342 of 36,697 output tokens
+were thinking. `--effort low` curbs it on the Claude runtime but does not stop it.
+
+**A call is authorized on the last token and overruns by its whole cost**, because the
+charge is only known after the call returns. Three of the first four runs finished over
+budget. `summary.json` records `tokens_left` as budget minus spend, which goes negative,
+and an `overdraft` field.
+
 ## Runtimes
 
 - **claude**: `claude -p --output-format json` with `--system-prompt`, `--tools ""`,
@@ -109,13 +132,49 @@ and a local model is free at the margin. Treat each runtime as its own league.
 - **codex**: `codex exec --json`. Parses `item.completed` agent messages and the
   `turn.completed` usage event. Written from the documented format but not verified
   on this machine, because the installed Codex CLI needs an upgrade for its configured model.
+- **baseline**: no model. Installs one hand-written greedy reflex and charges nothing.
+  The reference row on the leaderboard, not a competitor.
 - **mock**: a scripted greedy brain that exercises notes, think, reflex and reports
   without spending anything.
+
+## What the runs have shown so far
+
+- **A report about saving tokens cost 10,985 of them.** Across both Claude runs, roughly
+  80 percent of the budget went to mandatory strategy reports, a call the agent cannot
+  decline, shorten or price before making. Its per-tick decisions were nearly free.
+- **The cheapest run played worst.** A local Qwen decided on tick 1 to stand still to save
+  energy, then encoded that into a one-line reflex. Energy falls every tick regardless of
+  movement, so it starved at tick 20 having never eaten, with 72 percent of its budget
+  unspent and the board's lowest tokens per tick. The crisis interrupt exists because of
+  this run.
+- **Refusals are charged twice.** A local Llama refused several of its own self-prompts as
+  hunting advice. Each refusal was paid for, then appended to the next prompt as context
+  and paid for again as input. It burned the whole budget in eight ticks.
+- **Drift does not always punish.** Drift order is fixed by the seed, and seeds 1 and 3
+  both draw the camping predator first, which stops the predator hunting at tick 15. A
+  stale reflex can be rescued by a shift rather than broken by one.
+- **Models know what they have spent.** One report's arithmetic on its own spend was exact
+  to the token. What they misjudge is the cost of the reports themselves.
+
+## Known limits
+
+- The four original runs are log format 1, recorded before `observe()` imposed a
+  deterministic order on equal-distance cells. Their cell ordering cannot be reproduced by
+  this code, and reflexes break ties on that ordering, so `validate` checks them for
+  position, energy and life only and says so in its output. Format 2 runs are checked in
+  full. Do not build a claim about tie-breaking on a format 1 run.
+- The two seed 1 runs were also recorded before report replies could carry a reflex. The
+  seed 1 Claude creature authored three replacement reflexes inside reports that the
+  harness of the day discarded, and died to the exact bug the last of them fixed. Its
+  `reflex_versions: 1` is a fact about the old harness, not about the agent.
+- One run is one sample. Drift order, food placement and predator start all move with the
+  seed, and seeds vary enormously in difficulty. Nothing here is a ranking of models.
 
 ## Next
 
 - Token income from eating so burn rate versus investment becomes a real economy.
-- Evolution stages gated on survival plus skills, not just age.
+- Evolution gated on survival plus skills, not just age. Stages currently only raise the
+  energy ceiling.
 - Multiple creatures in one world, one per runtime.
 - A summary tool across runs: tokens per surviving tick, prompt length over time,
   claimed versus observed savings per report.

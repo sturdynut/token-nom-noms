@@ -238,11 +238,53 @@ class MockRuntime(Runtime):
         )
 
 
+GREEDY_REFLEX = """def act(obs):
+    preds = obs.get('predators') or ([obs['predator']] if obs.get('predator') else [])
+    for p in preds:
+        if abs(p[0]) + abs(p[1]) <= 2:
+            dx, dy = -p[0], -p[1]
+            return 'e' if dx > 0 else 'w' if dx < 0 else 's' if dy > 0 else 'n'
+    food = obs.get('food') or []
+    if not food:
+        return 'stay'
+    dx, dy = food[0]
+    if abs(dx) >= abs(dy):
+        return 'e' if dx > 0 else 'w'
+    return 's' if dy > 0 else 'n'
+"""
+
+
+class BaselineRuntime(Runtime):
+    """No model at all. Installs one hand-written greedy reflex and charges nothing.
+
+    This is the reference row on the leaderboard, not a competitor: it answers the
+    question every paid run has to beat, which is what a human's fifteen lines score
+    for free. Token counts are genuinely zero, so it also exercises the zero-budget
+    path through the harness.
+    """
+
+    name = "baseline"
+
+    def __init__(self, model="greedy", timeout=0):
+        super().__init__(model, timeout)
+
+    def call(self, system, prompt):
+        if "REPORT DUE" in prompt:
+            text = json.dumps({"strategy": "a hand-written greedy reflex, installed once, never revised",
+                               "changed": "nothing; this run has no model behind it",
+                               "expected_savings": "all of it", "confidence": 1.0})
+        else:
+            text = json.dumps({"action": "stay", "reflex": GREEDY_REFLEX,
+                               "notes": "hand-written baseline: flee any predator within 2, else walk to the nearest food"})
+        return CallResult(text=text, input_tokens=0, output_tokens=0, latency_ms=0)
+
+
 RUNTIMES = {
     "claude": ClaudeRuntime,
     "codex": CodexRuntime,
     "ollama": OllamaRuntime,
     "mock": MockRuntime,
+    "baseline": BaselineRuntime,
 }
 
 

@@ -94,7 +94,8 @@ def _load(path):
 
 def watch(run_dir: str, fps: float = 4.0, pause_on_calls: bool = True):
     """Animate a finished run in the terminal."""
-    cfg = json.load(open(os.path.join(run_dir, "config.json")))["config"]
+    with open(os.path.join(run_dir, "config.json")) as f:
+        cfg = json.load(f)["config"]
     ticks = _load(os.path.join(run_dir, "ticks.jsonl"))
     calls = _load(os.path.join(run_dir, "calls.jsonl"))
     by_tick = {}
@@ -114,7 +115,8 @@ def watch(run_dir: str, fps: float = 4.0, pause_on_calls: bool = True):
         pass
     summary_path = os.path.join(run_dir, "summary.json")
     if os.path.exists(summary_path):
-        s = json.load(open(summary_path))
+        with open(summary_path) as f:
+            s = json.load(f)
         print("\n%s after %d/%d ticks | ate %d | spent %d/%d tokens in %d calls | reflex ticks %d | self-prompts %d" % (
             "alive" if s["alive"] else s["cause_of_death"], s["survived_ticks"], s["max_ticks"], s["food_eaten"],
             s["tokens_spent"], s["budget"], s["model_calls"], s["reflex_ticks"], s["think_calls"]))

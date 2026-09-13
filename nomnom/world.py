@@ -29,10 +29,13 @@ class World:
         predator: bool = True,
         predator_every: int = 2,
         drift_every: int = 15,
+        stage_growth: bool = False,
     ):
         self.rng = random.Random(seed)
         self.size = size
+        self.base_max_energy = max_energy
         self.max_energy = max_energy
+        self.stage_growth = stage_growth
         self.food_value = food_value
         self.food_every = food_every
         self.predator_every = predator_every
@@ -58,6 +61,12 @@ class World:
             self._spawn_food()
 
     # ---- helpers -------------------------------------------------------
+
+    def current_max_energy(self) -> int:
+        """Growing up raises the energy ceiling, so the stage label means something."""
+        if not self.stage_growth:
+            return self.base_max_energy
+        return self.base_max_energy + {"hatchling": 0, "juvenile": 5, "adult": 10}[stage_for(self.tick_no)]
 
     @property
     def predator(self):
@@ -98,6 +107,7 @@ class World:
             "pos": [cx, cy],
             "grid": self.size,
             "energy": self.energy,
+            "max_energy": self.current_max_energy(),
             "stage": stage_for(self.tick_no),
             "food": food,
             "predator": preds[0] if preds else None,
@@ -156,6 +166,7 @@ class World:
 
         if self.creature in self.food:
             self.food.discard(self.creature)
+            self.max_energy = self.current_max_energy()
             self.energy = min(self.energy + self.food_value, self.max_energy)
             self.eaten += 1
             events.append("ate food (+%d)" % self.food_value)

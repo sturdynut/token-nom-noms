@@ -36,6 +36,10 @@ class Ledger:
                     system: str, prompt: str, res) -> int:
         charge = self.charge_for(res)
         before = self.remaining
+        # The true cost of a call is only known after it returns, so a call authorized on
+        # the last token can overrun. `remaining` is the agent's usable budget and floors
+        # at zero; `spent` records what was actually consumed, so the two disagree by the
+        # overdraft. summary.json reports both.
         self.remaining = max(0, self.remaining - charge)
         self.spent += charge
         self.last_charge = charge
@@ -65,6 +69,11 @@ class Ledger:
         }
         self._append(self._calls_path, entry)
         return charge
+
+    @property
+    def overdraft(self) -> int:
+        """Tokens spent beyond the budget. Zero unless the last call overran."""
+        return max(0, self.spent - self.budget)
 
     def record_tick(self, entry: dict):
         self._append(self._ticks_path, entry)

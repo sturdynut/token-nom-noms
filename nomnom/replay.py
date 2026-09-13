@@ -12,12 +12,16 @@ def _load(path):
 
 
 def replay(run_dir: str, show_calls: bool = False, show_prompts: bool = False):
-    cfg = json.load(open(os.path.join(run_dir, "config.json")))
+    with open(os.path.join(run_dir, "config.json")) as f:
+        cfg = json.load(f)
     ticks = _load(os.path.join(run_dir, "ticks.jsonl"))
     calls = _load(os.path.join(run_dir, "calls.jsonl"))
     reports = _load(os.path.join(run_dir, "reports.jsonl"))
     summary_path = os.path.join(run_dir, "summary.json")
-    summary = json.load(open(summary_path)) if os.path.exists(summary_path) else None
+    summary = None
+    if os.path.exists(summary_path):
+        with open(summary_path) as f:
+            summary = json.load(f)
 
     c = cfg["config"]
     print("RUN %s" % run_dir)
@@ -63,8 +67,10 @@ def replay(run_dir: str, show_calls: bool = False, show_prompts: bool = False):
     if os.path.exists(reflex_path):
         print()
         print("FINAL REFLEX (creature/reflex.py):")
-        print(open(reflex_path).read())
+        with open(reflex_path) as f:
+            print(f.read())
     notes_path = os.path.join(run_dir, "creature", "notes.md")
     if os.path.exists(notes_path):
         print("FINAL NOTES (creature/notes.md):")
-        print(open(notes_path).read())
+        with open(notes_path) as f:
+            print(f.read())

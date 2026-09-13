@@ -6,13 +6,24 @@ import os
 from .viz import absolute_state, _load
 
 
+def _read_text(path: str) -> str:
+    if not os.path.exists(path):
+        return ""
+    with open(path) as f:
+        return f.read()
+
+
 def load_run(run_dir: str) -> dict:
-    cfg = json.load(open(os.path.join(run_dir, "config.json")))
+    with open(os.path.join(run_dir, "config.json")) as f:
+        cfg = json.load(f)
     ticks = _load(os.path.join(run_dir, "ticks.jsonl"))
     calls = _load(os.path.join(run_dir, "calls.jsonl"))
     reports = _load(os.path.join(run_dir, "reports.jsonl"))
     summary_path = os.path.join(run_dir, "summary.json")
-    summary = json.load(open(summary_path)) if os.path.exists(summary_path) else None
+    summary = None
+    if os.path.exists(summary_path):
+        with open(summary_path) as f:
+            summary = json.load(f)
     for t in ticks:
         t["state"] = absolute_state(t)
         t.pop("obs", None)
@@ -28,8 +39,8 @@ def load_run(run_dir: str) -> dict:
         "calls": [{k: c.get(k) for k in ("tick", "kind", "depth", "prompt", "response", "input_tokens",
                                           "output_tokens", "thinking_tokens", "charged", "budget_after", "error")} for c in calls],
         "reports": reports,
-        "reflex": open(reflex_path).read() if os.path.exists(reflex_path) else "",
-        "notes": open(notes_path).read() if os.path.exists(notes_path) else "",
+        "reflex": _read_text(reflex_path),
+        "notes": _read_text(notes_path),
     }
 
 

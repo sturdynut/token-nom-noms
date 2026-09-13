@@ -1,0 +1,1 @@
+hand-written baseline: flee any predator within 2, else walk to the nearest food

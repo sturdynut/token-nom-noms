@@ -9,14 +9,6 @@ from .replay import replay
 from .runtimes import RUNTIMES, make_runtime
 
 
-def git_user():
-    import subprocess
-    try:
-        return subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5).stdout.strip() or None
-    except Exception:  # noqa: BLE001
-        return None
-
-
 def main(argv=None):
     p = argparse.ArgumentParser(prog="nomnom", description="token-nom-noms: survive on a token budget")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -32,12 +24,13 @@ def main(argv=None):
     r.add_argument("--report-every", type=int, default=10, dest="report_every")
     r.add_argument("--no-predator", action="store_true")
     r.add_argument("--drift-every", type=int, default=15, dest="drift_every", help="ticks between silent world shifts (0 disables)")
+    r.add_argument("--crisis-energy", type=int, default=5, dest="crisis_energy", help="energy at or below which the model overrides the reflex (0 disables)")
     r.add_argument("--timeout", type=int, default=180, help="seconds per model call")
     r.add_argument("--out", default="runs")
     r.add_argument("--quiet", action="store_true")
     r.add_argument("--watch", action="store_true", help="animate the world in the terminal while running")
     r.add_argument("--effort", default=None, help="claude runtime only: --effort level passed to claude (e.g. low)")
-    r.add_argument("--by", default=None, help="who ran this (defaults to git user.name); recorded in summary.json")
+    r.add_argument("--by", default=None, help="credit this run to a name or handle in summary.json (opt-in; nothing is recorded without it)")
 
     lb = sub.add_parser("leaderboard", help="aggregate every run's summary.json into runs/README.md")
     lb.add_argument("--runs", default="runs")
@@ -61,8 +54,9 @@ def main(argv=None):
     if a.cmd == "run":
         cfg = Config(runtime=a.runtime, model=a.model, budget=a.budget, ticks=a.ticks, seed=a.seed,
                      size=a.size, max_think=a.max_think, report_every=a.report_every,
-                     predator=not a.no_predator, drift_every=a.drift_every, timeout=a.timeout, out=a.out, quiet=a.quiet,
-                     watch=a.watch, effort=a.effort, by=a.by or git_user())
+                     predator=not a.no_predator, drift_every=a.drift_every,
+                     crisis_energy=a.crisis_energy, timeout=a.timeout, out=a.out, quiet=a.quiet,
+                     watch=a.watch, effort=a.effort, by=a.by)
         runtime = make_runtime(a.runtime, a.model, a.timeout, a.effort)
         summary = Game(cfg, runtime).run()
         return 0 if summary["alive"] else 1

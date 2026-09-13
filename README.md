@@ -4,9 +4,7 @@
 
 [![The free hand-written reflex stalled beside a rock on seed 1, food all around it, two traps already found](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=4&tick=30)
 
-*The landing page, and the point it makes. The zero-token reflex is stalled against a
-rock with food all around it, because straight-line distance is the only thing it knows
-and terrain makes that a lie. Click through to scrub the run yourself.*
+*The landing page. Pick a harness, then a model, then a run, and scrub it tick by tick.*
 
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.
@@ -63,7 +61,8 @@ python3 -m nomnom html runs/*/ -o docs/index.html                 # one page wit
 
 ### The canvas replay
 
-Scrub any run tick by tick. The spend strip along the bottom is the real scoreboard:
+Choose a harness, then one of its models, then a run from a filterable list. Scrub it
+tick by tick. The spend strip along the bottom is the real scoreboard:
 bar color is who decided, bar height is tokens charged, and a report's cost is stacked
 on the tick it was filed. Dashed lines are world shifts.
 

@@ -42,8 +42,43 @@ header{margin-bottom:14px}
 .runbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px;margin-bottom:16px}
 .runbar .sub{color:var(--ink-2);font-size:13.5px}
 .runbar .sub b{color:var(--ink);font-weight:600}
-.pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.pick label{font-size:12.5px;color:var(--ink-3)}
+
+.picker{display:grid;gap:12px;margin-bottom:20px}
+.pickrow{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:start}
+@media (max-width:620px){.pickrow{grid-template-columns:1fr;gap:6px}}
+.picklabel{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding-top:14px}
+@media (max-width:620px){.picklabel{padding-top:0}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip-btn{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;text-align:left;line-height:1.25;transition:border-color .12s,background .12s}
+.chip-btn:hover{border-color:var(--ink-3)}
+.chip-btn.on{border-color:var(--model);background:var(--model-soft)}
+.chip-btn.on .cb-name{color:var(--model)}
+.chip-btn svg{flex:none;width:17px;height:17px;stroke:var(--ink-3);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.chip-btn.on svg{stroke:var(--model)}
+.cb-text{display:grid}
+.cb-name{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.cb-sub{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.dot.ok{background:var(--reflex)}.dot.bad{background:var(--predator)}
+@media (prefers-reduced-motion: reduce){.chip-btn{transition:none}}
+
+.combo{position:relative;max-width:460px;flex:1 1 320px}
+.combo-field{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel)}
+.combo-field:focus-within{border-color:var(--focus)}
+.combo-field svg{width:15px;height:15px;stroke:var(--ink-3);fill:none;stroke-width:1.7;flex:none}
+.combo input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:0;outline:none}
+.combo input::placeholder{color:var(--ink-3)}
+.combo-caret{border:0;background:transparent;color:var(--ink-3);cursor:pointer;padding:0 2px;font-size:12px;line-height:1}
+.combo ul{position:absolute;z-index:5;left:0;right:0;top:calc(100% + 6px);margin:0;padding:5px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.18);max-height:280px;overflow-y:auto}
+.combo ul[hidden]{display:none}
+.combo li{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.combo li:hover,.combo li.cursor{background:var(--grid)}
+.combo li.on{background:var(--model-soft)}
+.combo li b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.combo li span{color:var(--ink-2);font-variant-numeric:tabular-nums}
+.combo li.empty-li{color:var(--ink-3);font-style:italic;cursor:default}
+.combo li.empty-li:hover{background:transparent}
+.pickrow .withpill{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--panel)}
 .pill.dead{border-color:var(--predator);color:var(--predator)}
 .pill.alive{border-color:var(--reflex);color:var(--reflex)}
@@ -148,13 +183,34 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     <span class="k out">Grey</span> is out of money with no reflex to fall back on.</p>
 </section>
 
+<section class="picker">
+  <div class="pickrow">
+    <span class="picklabel" id="lab-h">Harness</span>
+    <div class="chips" id="harnessRow" role="group" aria-labelledby="lab-h"></div>
+  </div>
+  <div class="pickrow">
+    <span class="picklabel" id="lab-m">Model</span>
+    <div class="chips" id="modelRow" role="group" aria-labelledby="lab-m"></div>
+  </div>
+  <div class="pickrow">
+    <span class="picklabel" id="lab-r">Run</span>
+    <div class="withpill">
+      <div class="combo" id="combo">
+        <div class="combo-field">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2 14 14"/></svg>
+          <input id="runFilter" type="text" role="combobox" aria-expanded="false" aria-controls="runList"
+                 aria-autocomplete="list" aria-labelledby="lab-r" autocomplete="off" placeholder="Filter by seed, outcome or date">
+          <button class="combo-caret" id="comboCaret" type="button" aria-label="Show all runs">&#9662;</button>
+        </div>
+        <ul id="runList" role="listbox" aria-labelledby="lab-r" hidden></ul>
+      </div>
+      <span class="pill" id="outcome"></span>
+    </div>
+  </div>
+</section>
+
 <div class="runbar">
   <div class="sub" id="meta"></div>
-  <div class="pick">
-    <label for="runsel" id="runsel-label">Run</label>
-    <select id="runsel" aria-labelledby="runsel-label"></select>
-    <span class="pill" id="outcome"></span>
-  </div>
 </div>
 
 <section class="stage">
@@ -232,11 +288,118 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   if (hash.run && RUNS[+hash.run]) run = RUNS[+hash.run];
   function syncHash() { try { history.replaceState(null, '', '#run=' + RUNS.indexOf(run) + '&tick=' + run.ticks[i].tick); } catch (e) {} }
 
-  const sel = $('runsel');
-  RUNS.forEach((r, k) => { const o = document.createElement('option'); o.value = k; o.textContent = r.runtime + ' · ' + (r.model || '') + ' · seed ' + r.cfg.seed; sel.appendChild(o); });
-  if (RUNS.length < 2) { sel.hidden = true; $('runsel-label').hidden = true; }
-  sel.value = RUNS.indexOf(run);
-  sel.addEventListener('change', () => { run = RUNS[+sel.value]; i = 0; stop(); buildStrip(); buildFoot(); show(); });
+  // ---- harness -> model -> run picker ---------------------------------
+  // Abstract marks rather than brand logos: a rule for the free reference line,
+  // a burst for Claude, angle brackets for Codex, stacked layers for a local model.
+  const ICONS = {
+    baseline: '<path d="M2 11h13M2 6h6"/>',
+    claude: '<path d="M8.5 2v13M3 5l11 7M14 5 3 12"/>',
+    codex: '<path d="M6 4 2 8.5 6 13M11 4l4 4.5L11 13"/>',
+    ollama: '<path d="M2.5 5.5 8.5 2.5l6 3-6 3z"/><path d="M2.5 8.5l6 3 6-3"/><path d="M2.5 11.5l6 3 6-3"/>',
+  };
+  const icon = h => '<svg viewBox="0 0 17 17" aria-hidden="true">' + (ICONS[h] || ICONS.claude) + '</svg>';
+  const uniq = a => a.filter((v, k) => a.indexOf(v) === k);
+  const harnesses = () => uniq(RUNS.map(r => r.runtime))
+    .sort((a, b) => (a === 'baseline') - (b === 'baseline') || a.localeCompare(b));
+  const modelsIn = h => uniq(RUNS.filter(r => r.runtime === h).map(r => r.model || ''));
+  const runsIn = (h, m) => RUNS.filter(r => r.runtime === h && (r.model || '') === m);
+  let selH = run.runtime, selM = run.model || '';
+
+  function tile(cls, inner, on, onClick) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip-btn' + (on ? ' on' : '');
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.innerHTML = inner;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function buildPicker() {
+    const hr = $('harnessRow'); hr.textContent = '';
+    harnesses().forEach(h => {
+      const n = RUNS.filter(r => r.runtime === h).length;
+      hr.appendChild(tile('h', icon(h) + '<span class="cb-text"><span class="cb-name">' + esc(h) +
+        '</span><span class="cb-sub">' + n + (n === 1 ? ' run' : ' runs') + '</span></span>',
+        h === selH, () => { selH = h; selM = modelsIn(h)[0]; pick(runsIn(selH, selM)[0]); }));
+    });
+    const mr = $('modelRow'); mr.textContent = '';
+    modelsIn(selH).forEach(m => {
+      const rs = runsIn(selH, m);
+      const best = rs.reduce((a, r) => Math.max(a, (r.summary || {}).survived_ticks || 0), 0);
+      const cap = (rs[0].summary || {}).max_ticks || run.cfg.ticks;
+      const alive = rs.some(r => (r.summary || {}).alive);
+      mr.appendChild(tile('m', '<span class="dot ' + (alive ? 'ok' : 'bad') + '"></span>' +
+        '<span class="cb-text"><span class="cb-name">' + esc(m || '—') + '</span>' +
+        '<span class="cb-sub">' + rs.length + (rs.length === 1 ? ' run' : ' runs') +
+        ' · best ' + best + '/' + cap + '</span></span>',
+        m === selM, () => { selM = m; pick(runsIn(selH, selM)[0]); }));
+    });
+    buildRunList($('runFilter').value);
+  }
+
+  function runLabel(r) {
+    const s = r.summary || {};
+    return (s.alive ? 'alive' : (s.cause_of_death || 'ended')) + ' ' + s.survived_ticks + '/' + s.max_ticks +
+           ' · ' + fmt(s.tokens_spent) + ' tokens · ' + r.name.slice(0, 8);
+  }
+
+  const list = $('runList'), filt = $('runFilter');
+  let cursor = -1, pool = [];
+
+  function buildRunList(q) {
+    q = (q || '').trim().toLowerCase();
+    pool = runsIn(selH, selM).filter(r =>
+      !q || (('seed ' + r.cfg.seed + ' ' + runLabel(r) + ' ' + r.name).toLowerCase().indexOf(q) >= 0));
+    list.textContent = '';
+    if (!pool.length) {
+      const li = document.createElement('li');
+      li.className = 'empty-li'; li.textContent = 'No runs match that filter';
+      list.appendChild(li); cursor = -1; return;
+    }
+    pool.forEach((r, k) => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', r === run ? 'true' : 'false');
+      li.className = (r === run ? 'on' : '') + (k === cursor ? ' cursor' : '');
+      li.innerHTML = '<b>seed ' + esc(r.cfg.seed) + '</b><span>' + esc(runLabel(r)) + '</span>';
+      li.addEventListener('mousedown', e => { e.preventDefault(); pick(r); closeCombo(); });
+      list.appendChild(li);
+    });
+  }
+
+  function fieldLabel(r) {
+    const s = r.summary || {};
+    return 'seed ' + r.cfg.seed + ' · ' + (s.alive ? 'alive' : (s.cause_of_death || 'ended')) +
+           ' ' + s.survived_ticks + '/' + s.max_ticks;
+  }
+  function openCombo() { list.hidden = false; filt.setAttribute('aria-expanded', 'true'); }
+  function closeCombo() { list.hidden = true; filt.setAttribute('aria-expanded', 'false'); cursor = -1; }
+  filt.addEventListener('focus', () => { filt.value = ''; buildRunList(''); openCombo(); });
+  filt.addEventListener('input', () => { cursor = -1; buildRunList(filt.value); openCombo(); });
+  filt.addEventListener('blur', () => setTimeout(() => { closeCombo(); filt.value = fieldLabel(run); }, 120));
+  $('comboCaret').addEventListener('click', () => {
+    if (list.hidden) { filt.value = ''; buildRunList(''); openCombo(); filt.focus(); } else closeCombo();
+  });
+  filt.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (list.hidden) { buildRunList(filt.value); openCombo(); }
+      if (!pool.length) return;
+      cursor = (cursor + (e.key === 'ArrowDown' ? 1 : pool.length - 1)) % pool.length;
+      buildRunList(filt.value);
+      const el = list.children[cursor]; if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (!list.hidden && pool[cursor]) { e.preventDefault(); pick(pool[cursor]); closeCombo(); filt.blur(); }
+    } else if (e.key === 'Escape') { closeCombo(); filt.blur(); }
+  });
+
+  function pick(r) {
+    if (!r || r === run) { if (r) filt.value = fieldLabel(r); buildPicker(); return; }
+    run = r; selH = r.runtime; selM = r.model || ''; i = 0;
+    filt.value = fieldLabel(r);
+    stop(); buildStrip(); buildFoot(); show(); buildPicker();
+  }
 
   function callsAt(t, kind) { return run.calls.filter(c => c.tick === t && (!kind || c.kind === kind)); }
   function fmt(n) { return (n == null ? '–' : n.toLocaleString()); }
@@ -324,6 +487,12 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('thoughts').innerHTML = html || '<span class="empty">none</span>';
     $('scrub').value = t.tick;
     draw(); markStrip(); syncHash();
+    if (!pickerReady) return;
+    list.querySelectorAll('li[role=option]').forEach((li, k) => {
+      const on = pool[k] === run;
+      li.setAttribute('aria-selected', on ? 'true' : 'false');
+      li.classList.toggle('on', on);
+    });
   }
 
   // ---- spend strip -----------------------------------------------------
@@ -387,8 +556,10 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('reflex').textContent = run.reflex || 'The creature never wrote a reflex.';
   }
 
+  let pickerReady = false;
   buildStrip(); buildFoot();
   if (hash.tick) { const k = run.ticks.findIndex(t => t.tick === +hash.tick); if (k >= 0) i = k; }
+  buildPicker(); filt.value = fieldLabel(run); pickerReady = true;
   show();
   let raf = null; window.addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
   if (window.matchMedia) { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildStrip(); show(); }); }

@@ -160,9 +160,15 @@ and an `overdraft` field.
   charged as output and logged separately; pass `--effort low` to curb them.
 - **ollama**: `POST /api/generate`. Usage from `prompt_eval_count` and `eval_count`.
   `<think>` blocks are stripped from the reply but their tokens are still charged.
-- **codex**: `codex exec --json`. Parses `item.completed` agent messages and the
-  `turn.completed` usage event. Written from the documented format but not verified
-  on this machine, because the installed Codex CLI needs an upgrade for its configured model.
+- **codex**: `codex exec --json --ephemeral`. Parses `item.completed` agent messages and
+  the `turn.completed` usage event, including reasoning and cache counts. Verified against
+  CLI 0.154.0. Model names come from `~/.codex/models_cache.json`; on a ChatGPT account
+  `gpt-6-astra`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.6-luna` and `gpt-5.5` work, while
+  `gpt-6-terra` and `gpt-6-sol` are refused as "not supported when using Codex with a
+  ChatGPT account". Codex ships 12,000 to 15,000 tokens of its own agent instructions on
+  every call and offers no way to strip them, so budget accordingly.
+  Dollar cost reads zero for ChatGPT-account runs because usage comes out of the plan
+  rather than per-token billing. The token counts are still exact.
 - **baseline**: no model. Installs one hand-written greedy reflex and charges nothing.
   The reference row on the leaderboard, not a competitor.
 - **mock**: a scripted greedy brain that exercises notes, think, reflex and reports
@@ -212,6 +218,21 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
 
   Spend runs backwards against capability. Fable was both the cheapest survivor and the best
   forager, on roughly half of Sonnet's budget.
+- **All four Codex models survived, and paid dearly for the privilege.** Astra, Terra, Sol
+  and Luna each wrote a reflex on the first move and finished all fifty ticks on seed 1.
+  But Codex carries its own agent instructions on every call, so its input cost per thought
+  is two orders of magnitude above Claude's:
+
+  | runtime | uncached input per call | cache read per call |
+  | --- | ---: | ---: |
+  | Claude (fable, opus, sonnet) | 2 | ~1,000 |
+  | Codex (terra) | 3,283 | 13,739 |
+  | Codex (astra) | 9,678 | 9,216 |
+
+  Claude Code lets the harness replace its system prompt and strip its tools, which drops
+  per-call overhead to almost nothing. Codex has no equivalent, so three of the four Codex
+  runs finished over budget. Their spend measures the agent harness far more than the model
+  inside it, which is why runtimes are separate leagues here.
 - **What separated them was one piece of code, written once.** Fable's tick-1 reflex is a
   weighted Dijkstra search from every food source, with pits and traps priced into the edge
   cost and a scoring function that backs away from predators. It never revised it. Haiku's

@@ -31,6 +31,10 @@ Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain
 | 1 | 50/50 | alive | +7 | claude | fable | Matti Salokangas | 15,793 | 315.9 | 16 | 5 | 49 | 0 | 0.445 | [20260913-143711-claude-fable-seed1](20260913-143711-claude-fable-seed1/) |
 | 1 | 50/50 | alive | +7 | claude | opus | Matti Salokangas | 18,621 | 372.4 | 13 | 5 | 49 | 0 | 0.277 | [20260913-143711-claude-opus-seed1](20260913-143711-claude-opus-seed1/) |
 | 1 | 50/50 | alive | +7 | claude | sonnet | Matti Salokangas | 30,259 | 605.2 | 10 | 7 | 47 | 0 | 0.222 | [20260913-143711-claude-sonnet-seed1](20260913-143711-claude-sonnet-seed1/) |
+| 1 | 50/50 | alive | +7 | codex | gpt-5.6-luna | Matti Salokangas | 46,124 (+6,124 over) | 922.5 | 11 | 4 | 49 | 0 | 0.000 | [20260913-145056-codex-gpt-5.6-luna-seed1](20260913-145056-codex-gpt-5.6-luna-seed1/) |
+| 1 | 50/50 | alive | +7 | codex | gpt-5.6-sol | Matti Salokangas | 40,163 (+163 over) | 803.3 | 11 | 5 | 49 | 0 | 0.000 | [20260913-145056-codex-gpt-5.6-sol-seed1](20260913-145056-codex-gpt-5.6-sol-seed1/) |
+| 1 | 50/50 | alive | +7 | codex | gpt-5.6-terra | Matti Salokangas | 32,972 | 659.4 | 10 | 6 | 48 | 0 | 0.000 | [20260913-145056-codex-gpt-5.6-terra-seed1](20260913-145056-codex-gpt-5.6-terra-seed1/) |
+| 1 | 50/50 | alive | +7 | codex | gpt-6-astra | Matti Salokangas | 46,151 (+6,151 over) | 923.0 | 9 | 4 | 49 | 0 | 0.000 | [20260913-145056-codex-gpt-6-astra-seed1](20260913-145056-codex-gpt-6-astra-seed1/) |
 | 1 | 16/50 | eaten by predator | -27 | claude | haiku (low effort) | Matti Salokangas | 41,564 (+1,564 over) | 2597.8 | 1 | 6 | 0 | 0 | 0.169 | [20260913-125018-claude-haiku-seed1](20260913-125018-claude-haiku-seed1/) |
 | 1 | 8/50 | eaten by predator | -35 | claude | haiku | Matti Salokangas | 9,268 | 1158.5 | 2 | 1 | 7 | 0 | 0.040 | [20260913-143711-claude-haiku-seed1](20260913-143711-claude-haiku-seed1/) |
 

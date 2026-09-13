@@ -1,0 +1,49 @@
+{
+  "format": 2,
+  "run_dir": "runs/20260913-145056-codex-gpt-5.6-terra-seed1",
+  "by": "Matti Salokangas",
+  "runtime": "codex",
+  "model": "gpt-5.6-terra",
+  "models_billed": [
+    "gpt-5.6-terra"
+  ],
+  "seed": 1,
+  "survived_ticks": 50,
+  "max_ticks": 50,
+  "alive": true,
+  "cause_of_death": null,
+  "food_eaten": 10,
+  "final_energy": 39,
+  "budget": 40000,
+  "tokens_spent": 32972,
+  "tokens_left": 7028,
+  "overdraft": 0,
+  "model_calls": 6,
+  "cost_usd": 0.0,
+  "reflex_versions": 3,
+  "drifts": [
+    {
+      "tick": 15,
+      "kind": "camping_predator",
+      "detail": "predators now camp the nearest food instead of chasing you"
+    },
+    {
+      "tick": 30,
+      "kind": "fast_predator",
+      "detail": "predators now move every tick"
+    },
+    {
+      "tick": 45,
+      "kind": "second_predator",
+      "detail": "a second predator appeared at [0, 9]"
+    }
+  ],
+  "model_ticks": 2,
+  "reflex_ticks": 48,
+  "idle_ticks": 0,
+  "crisis_calls": 1,
+  "think_calls": 0,
+  "report_calls": 4,
+  "parse_errors": 0,
+  "call_errors": 0
+}

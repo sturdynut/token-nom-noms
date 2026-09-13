@@ -1,0 +1,1 @@
+Use the free reflex every tick. Replan from current food, terrain, and all predators; use conservative pursuit forecasts and learn observed movement speed. Reports should assess survival and change the reflex only when evidence warrants it. No paid self-prompts.

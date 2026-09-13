@@ -1,0 +1,1 @@
+Reflex-led survival; revise only at reports or crises if behavior degrades.

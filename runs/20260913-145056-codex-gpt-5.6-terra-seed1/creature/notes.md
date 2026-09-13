@@ -1,0 +1,1 @@
+Reflex handles normal movement; intervene only in crisis calls if food is blocked or predators close.

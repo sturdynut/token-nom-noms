@@ -92,7 +92,13 @@ class ClaudeRuntime(Runtime):
 
 
 class CodexRuntime(Runtime):
-    """Codex CLI in exec --json mode. Written from the documented event format; verify on your install."""
+    """Codex CLI in exec --json mode.
+
+    Codex carries its own agent instructions on every call, which cost roughly 12-15k
+    input tokens before the game says anything. That floor is a real property of the
+    runtime and is charged like any other input, so a Codex creature gets very few
+    thoughts per budget. Compare Codex runs to other Codex runs, not to Claude.
+    """
 
     name = "codex"
 
@@ -131,6 +137,9 @@ class CodexRuntime(Runtime):
             input_tokens=max(0, (usage.get("input_tokens", 0) or 0) - cached),
             output_tokens=usage.get("output_tokens", 0) or 0,
             cache_read=cached,
+            cache_write=usage.get("cache_write_input_tokens", 0) or 0,
+            thinking_tokens=usage.get("reasoning_output_tokens", 0) or 0,
+            models=[self.model] if self.model else [],
             latency_ms=ms,
             error=err if (err and not text) else None,
             raw={"stdout_tail": proc.stdout[-2000:], "stderr_tail": proc.stderr[-500:]},

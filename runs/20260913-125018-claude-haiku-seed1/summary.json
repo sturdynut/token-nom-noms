@@ -1,0 +1,36 @@
+{
+  "format": 2,
+  "run_dir": "runs/20260913-125018-claude-haiku-seed1",
+  "by": "Matti Salokangas",
+  "runtime": "claude",
+  "model": "haiku",
+  "seed": 1,
+  "survived_ticks": 16,
+  "max_ticks": 50,
+  "alive": false,
+  "cause_of_death": "eaten by predator",
+  "food_eaten": 1,
+  "final_energy": 12,
+  "budget": 40000,
+  "tokens_spent": 41564,
+  "tokens_left": -1564,
+  "overdraft": 1564,
+  "model_calls": 6,
+  "cost_usd": 0.1685,
+  "reflex_versions": 0,
+  "drifts": [
+    {
+      "tick": 15,
+      "kind": "camping_predator",
+      "detail": "predators now camp the nearest food instead of chasing you"
+    }
+  ],
+  "model_ticks": 6,
+  "reflex_ticks": 0,
+  "idle_ticks": 10,
+  "crisis_calls": 0,
+  "think_calls": 0,
+  "report_calls": 0,
+  "parse_errors": 0,
+  "call_errors": 0
+}

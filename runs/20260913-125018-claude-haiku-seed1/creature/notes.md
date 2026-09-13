@@ -1,0 +1,1 @@
+Tick 6: Moving south toward nearest food. Observation uses relative coordinates: food at [0,2] rel means absolute [3,6]. Path [3,4]→[3,5]→[3,6] clear (verified against rocks, pits, traps). Energy after move: 22; after collecting food next tick: 29. Predator at [-2,-3] rel ≈3.16 cells away, moves next at tick 8. Strategy: collect this food safely, then reassess.

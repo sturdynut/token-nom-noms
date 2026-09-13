@@ -4,6 +4,10 @@
 
 [![The free hand-written reflex stalled beside a rock on seed 1, food all around it, two traps already found](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=4&tick=30)
 
+*The zero-token reflex, stalled against a rock with food all around it. Straight-line
+distance is the only thing it knows, and terrain makes that a lie. Click through to
+scrub the run.*
+
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.
 The point of the game is to survive. The point of the project is to harvest
@@ -48,17 +52,38 @@ you can compare what the agent claims with what it actually spent.
 
 ## Watch it
 
+Two viewers, both reading only the run logs and never the simulation.
+
 ```
-python3 -m nomnom run --runtime claude --model haiku --watch     # live terminal view while it runs
+python3 -m nomnom run --runtime claude --model haiku --watch      # live terminal view while it runs
 python3 -m nomnom replay runs/<run-dir> --watch --fps 6           # animate a finished run in the terminal
 python3 -m nomnom html runs/<run-dir> --open                      # standalone HTML5 canvas replay
 python3 -m nomnom html runs/*/ -o docs/index.html                 # one page with every run, switchable
 ```
 
-The canvas page shows the grid, energy and budget meters, the creature's notes and
-self-prompts for the selected tick, and a per-tick spend strip that doubles as the
-scrubber. Bar color is who decided (paid model call, free reflex, idle), bar height
-is tokens charged. Both views read only the run logs, never the simulation.
+### The canvas replay
+
+Scrub any run tick by tick. The spend strip along the bottom is the real scoreboard:
+bar color is who decided, bar height is tokens charged, and a report's cost is stacked
+on the tick it was filed. Dashed lines are world shifts.
+
+This is a paid run on seed 3. Amber towers are its mandatory strategy reports, the
+short green dashes below are the ticks its free reflex handled, and the difference
+between them is the project's central finding.
+
+[![A paid Claude run on seed 3, its reflex on version three after two world shifts, with report bars towering over the free reflex ticks](docs/screenshot-paid.png)](https://sturdynut.github.io/token-nom-noms/#run=2&tick=30)
+
+And this is what losing to free looks like. Six paid decisions, no reflex ever written,
+then ten grey idle ticks standing still until the predator arrives.
+
+[![A paid Claude run on seed 1 that spent its whole budget in six ticks and then stood still until it was eaten](docs/screenshot-broke.png)](https://sturdynut.github.io/token-nom-noms/#run=9&tick=16)
+
+### The terminal view
+
+The same run data, live while a game plays or replayed afterwards. Rocks are `#`,
+pits are `O`, discovered traps are `^`, the creature is `@` and a predator is `P`.
+
+![The terminal watch view showing the grid, energy and budget bars, a world shift and the last report](docs/screenshot-terminal.png)
 
 ## Community runs
 
@@ -74,7 +99,8 @@ the world from each run's seed and logged actions and checks it against the log,
 runs it with the unit tests on every PR. See `CONTRIBUTING.md` for the four ways to take part.
 
 **The row to beat is free.** `--runtime baseline` plays one hand-written greedy reflex for
-zero tokens. It survives one of the five benchmark seeds. Any paid run that does not beat
+zero tokens. It survives one of the five benchmark seeds, and so far it is beating every
+paid run on the board. Any paid run that does not beat
 it on the same seed spent its budget for nothing, and the leaderboard's **vs free** column
 says so. Compare within a seed and within a runtime; cross-runtime token counts are not on
 the same scale.
@@ -171,6 +197,20 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
 
 ## What the runs have shown so far
 
+- **The first paid run under the full ruleset lost to free by 27 ticks.** Claude haiku on
+  seed 1, with terrain and drift, never wrote a reflex at all. It reasoned about each step
+  individually, spent the whole 40,000 token budget in six ticks, then stood still with no
+  reflex to fall back on and was eaten at tick 16. The free hand-written reflex survived 43
+  ticks on the same seed for nothing. Paying is not the same as playing well.
+- **Thinking escalated as the situation got harder, which accelerated the loss.** Across
+  those six calls the thinking tokens per call ran 1,972, 1,875, 3,654, 6,585, 6,152, 8,770.
+  The harder the position, the more it spent per decision, and the sooner it had nothing
+  left to decide with.
+- **It did by hand, every tick, the work a reflex does once for nothing.** Its note at tick
+  6 reads: *"Path [3,4] to [3,5] to [3,6] clear (verified against rocks, pits, traps).
+  Energy after move: 22; after collecting food next tick: 29."* That is careful, correct,
+  and the most expensive possible way to play. The same check costs zero tokens the moment
+  it is written down as `act(obs)`.
 - **A report about saving tokens cost 10,985 of them.** Across both Claude runs, roughly
   80 percent of the budget went to mandatory strategy reports, a call the agent cannot
   decline, shorten or price before making. Its per-tick decisions were nearly free.

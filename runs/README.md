@@ -28,7 +28,7 @@ Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain
 
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | food | model calls | reflex ticks | self-prompts | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| | | no benchmark runs yet | | | | | | | | | | | | |
+| 1 | 16/50 | eaten by predator | -27 | claude | haiku | Matti Salokangas | 41,564 (+1,564 over) | 2597.8 | 1 | 6 | 0 | 0 | 0.169 | [20260913-125018-claude-haiku-seed1](20260913-125018-claude-haiku-seed1/) |
 
 ## Other runs
 

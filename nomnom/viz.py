@@ -83,7 +83,8 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
     lines.append("budget  %s %d/%d" % (bar(entry["budget_after"], budget, color=CYAN), entry["budget_after"], budget))
     lines.append("source  %s%-11s%s action %s%-4s%s cost %d   reflex v%d" % (
         color, entry["source"], RESET, BOLD, entry["action"], RESET, entry["tick_cost"], entry.get("reflex_version", 0)))
-    lines.append("events  " + ", ".join(entry["events"]) if entry["events"] else "events  -")
+    shown = [e for e in entry["events"] if not e.startswith("DRIFT: ")]
+    lines.append("events  " + (", ".join(shown) if shown else "-"))
     if entry.get("drift"):
         lines.append(YELLOW + BOLD + "WORLD SHIFTED: " + entry["drift"] + RESET)
     notes = (entry.get("notes") or "").strip().replace("\n", " ")

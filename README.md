@@ -4,9 +4,9 @@
 
 [![The free hand-written reflex stalled beside a rock on seed 1, food all around it, two traps already found](docs/screenshot.png)](https://sturdynut.github.io/token-nom-noms/#run=4&tick=30)
 
-*The zero-token reflex, stalled against a rock with food all around it. Straight-line
-distance is the only thing it knows, and terrain makes that a lie. Click through to
-scrub the run.*
+*The landing page, and the point it makes. The zero-token reflex is stalled against a
+rock with food all around it, because straight-line distance is the only thing it knows
+and terrain makes that a lie. Click through to scrub the run yourself.*
 
 A survival game where the creature's brain is an LLM agent, and every thought
 costs tokens from a fixed budget. The agent can only act by prompting itself.

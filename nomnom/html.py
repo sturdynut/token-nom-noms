@@ -110,7 +110,7 @@ button:hover,select:hover{border-color:var(--ink-3)}
 button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible,.strip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min-width:78px}
 .explain{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:18px;margin-bottom:22px;display:grid;gap:16px}
-.lede{margin:0;font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;font-size:clamp(18px,2.2vw,23px);font-weight:500;line-height:1.3;letter-spacing:-0.01em;max-width:38ch;text-wrap:balance}
+.lede{margin:0;font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;font-size:clamp(18px,2.2vw,23px);font-weight:500;line-height:1.3;letter-spacing:-0.01em;max-width:46ch}
 .lede b{font-weight:700}
 .lede2{display:inline-block;margin-top:.35em;color:var(--ink-2)}
 .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px 28px}
@@ -183,7 +183,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
 </header>
 
 <section class="explain">
-  <p class="lede">Every thought an AI has costs <b>tokens</b>, and tokens cost money.<br><span class="lede2">This is a game about running out of them.</span></p>
+  <p class="lede">Every thought an AI has costs <b>tokens</b>,<br>and tokens cost money.<br><span class="lede2">This is a game about running out of them.</span></p>
   <div class="how">
     <div>
       <h3>One creature, one budget</h3>

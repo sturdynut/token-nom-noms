@@ -31,6 +31,7 @@ spawning on at 2,000 tokens a body.
 | seed | survived | outcome | vs free | runtime | model | by | tokens spent | earned | colony | food | model calls | reflex ticks | $ | run |
 | ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 | 50/50 | alive | +7 | claude | fable | Matti Salokangas | 34,667 | 8,000 | 3 (5 spawns) | 21 | 9 | 45 | 0.663 | [20260913-201341-claude-fable-seed1](20260913-201341-claude-fable-seed1/) |
+| 3 | 50/50 | alive | same | claude | fable | Matti Salokangas | 35,540 | 6,400 | 3 (3 spawns) | 17 | 11 | 43 | 0.811 | [20260914-130355-claude-fable-seed3](20260914-130355-claude-fable-seed3/) |
 
 ## Other runs
 

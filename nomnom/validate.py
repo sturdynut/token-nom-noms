@@ -63,17 +63,21 @@ def validate_run(run_dir: str):
     charged = sum(x.get("charged", 0) for x in calls)
     spawn_costs = summary.get("spawn_costs", 0) or 0
     earned = summary.get("tokens_earned", 0) or 0
+    bonus = summary.get("bonus_tokens", 0) or 0
     if summary.get("tokens_spent") != charged + spawn_costs:
         problems.append("summary tokens_spent %s but calls (%d) plus spawn costs (%d) make %d"
                         % (summary.get("tokens_spent"), charged, spawn_costs, charged + spawn_costs))
     if summary.get("model_calls") != len(calls):
         problems.append("summary model_calls %s but %d calls logged" % (summary.get("model_calls"), len(calls)))
     spent = charged + spawn_costs
-    if strict and summary.get("tokens_left") != c["budget"] + earned - spent:
-        problems.append("summary tokens_left %s should be budget plus earnings minus spend (%d)"
-                        % (summary.get("tokens_left"), c["budget"] + earned - spent))
-    if spent > c["budget"] + earned:
-        notes.append("overdrew by %d tokens on its last call" % (spent - c["budget"] - earned))
+    if strict and summary.get("tokens_left") != c["budget"] + earned + bonus - spent:
+        problems.append("summary tokens_left %s should be budget plus earnings and bonus minus spend (%d)"
+                        % (summary.get("tokens_left"), c["budget"] + earned + bonus - spent))
+    if spent > c["budget"] + earned + bonus:
+        notes.append("overdrew by %d tokens on its last call" % (spent - c["budget"] - earned - bonus))
+    if bonus:
+        notes.append("found the glint %d time(s) for %d bonus tokens"
+                     % (summary.get("glints_taken", 0), bonus))
     if earned:
         notes.append("foraging earned %d tokens back across %d spawn(s)"
                      % (earned, summary.get("spawns", 0)))
@@ -89,13 +93,13 @@ def validate_run(run_dir: str):
               trap_cost=c.get("trap_cost", 8), spawning=c.get("spawning", False),
               spawn_energy=c.get("spawn_energy", 10), max_colony=c.get("max_colony", 6),
               income_per_food=c.get("income_per_food", 400),
-              income_cap=c.get("income_cap", 20000))
+              income_cap=c.get("income_cap", 20000), secret=c.get("secret", False))
     norm = (lambda v: v) if strict else _cells
     for t in ticks:
         expected_obs = t.get("obs")
         if expected_obs:
             got = w.observe()
-            for k in ("pos", "energy", "food", "predator", "rocks", "pits", "traps_known"):
+            for k in ("pos", "energy", "food", "predator", "rocks", "pits", "traps_known", "glint"):
                 if k not in expected_obs:
                     continue  # the key postdates this run's log shape
                 if norm(got.get(k)) != norm(expected_obs.get(k)):

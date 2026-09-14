@@ -51,6 +51,7 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
     rocks = {tuple(c) for c in (st.get("rocks") or [])}
     pits = {tuple(c) for c in (st.get("pits") or [])}
     traps = {tuple(c) for c in (st.get("traps_known") or [])}
+    glint = tuple(st["glint"]) if st.get("glint") else None
     pos = tuple(st["pos"])
     trail = {tuple(p) for p in (trail or [])}
     bodies = [b for b in (st.get("critters") or [{"id": 0, "pos": st["pos"], "alive": True}]) if b.get("alive")]
@@ -77,6 +78,8 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
                 row.append(MAGENTA + "O" + RESET)
             elif c in traps:
                 row.append(RED + "^" + RESET)
+            elif glint and c == glint:
+                row.append(YELLOW + BOLD + "$" + RESET)
             elif c in trail:
                 row.append(DIM + "·" + RESET)
             else:
@@ -95,6 +98,8 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
         color, entry["source"], RESET, BOLD, entry["action"], RESET, entry["tick_cost"], entry.get("reflex_version", 0)))
     shown = [e for e in entry["events"] if not e.startswith("DRIFT: ")]
     lines.append("events  " + (", ".join(shown) if shown else "-"))
+    if entry.get("bonus"):
+        lines.append(YELLOW + BOLD + "THE GLINT PAID OUT: +%d tokens" % entry["bonus"] + RESET)
     if entry.get("drift"):
         lines.append(YELLOW + BOLD + "WORLD SHIFTED: " + entry["drift"] + RESET)
     notes = (entry.get("notes") or "").strip().replace("\n", " ")

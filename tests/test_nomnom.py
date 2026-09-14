@@ -358,6 +358,101 @@ class TestColony(unittest.TestCase):
         self.assertEqual(w.critters[1]["pos"], (before[0], before[1] + 1))
 
 
+class TestSecret(unittest.TestCase):
+    """The undocumented corner mechanic. Nothing in the rules text describes any of this."""
+
+    def _w(self, **kw):
+        kw.setdefault("secret", True)
+        kw.setdefault("initial_food", 0)
+        kw.setdefault("predator", False)
+        kw.setdefault("drift_every", 0)
+        kw.setdefault("terrain_density", 0)
+        kw.setdefault("start_energy", 500)
+        return World(seed=1, **kw)
+
+    def test_off_by_default(self):
+        w = World(seed=1)
+        self.assertFalse(w.secret)
+        w.critters[0]["pos"] = (0, 0)
+        w.step("stay")
+        self.assertIsNone(w.glint)
+
+    def test_touching_a_corner_calls_one_to_a_corner_across_the_board(self):
+        w = self._w()
+        w.critters[0]["pos"] = (0, 0)
+        w.step("stay")
+        self.assertIsNotNone(w.glint)
+        self.assertIn(w.glint, w.corners())
+        self.assertNotEqual(w.glint, (0, 0))
+        # it shares exactly one axis with the touched corner, so the trip is the long way
+        self.assertTrue((w.glint[0] == 0) != (w.glint[1] == 0))
+
+    def test_a_middle_cell_calls_nothing(self):
+        w = self._w()
+        w.critters[0]["pos"] = (5, 5)
+        w.step("stay")
+        self.assertIsNone(w.glint)
+
+    def test_only_one_at_a_time(self):
+        w = self._w()
+        w.critters[0]["pos"] = (0, 0)
+        w.step("stay")
+        first = w.glint
+        w.step("stay")
+        self.assertEqual(w.glint, first, "a second must not appear while one is out")
+
+    def test_reaching_it_fires_once_and_clears(self):
+        w = self._w()
+        w.critters[0]["pos"] = (0, 0)
+        w.step("stay")
+        target = w.glint
+        w.critters[0]["pos"] = target
+        w.step("stay")
+        self.assertTrue(w.glint_this_tick)
+        self.assertEqual(w.glints_taken, 1)
+        self.assertIsNone(w.glint)
+        w.step("stay")
+        self.assertFalse(w.glint_this_tick, "it pays once")
+
+    def test_it_is_visible_but_unnamed_in_the_observation(self):
+        w = self._w()
+        w.critters[0]["pos"] = (0, 0)
+        self.assertNotIn("glint", w.observe())
+        w.step("stay")
+        self.assertIn("glint", w.observe(), "an agent can see it, and is told nothing")
+
+
+class TestBonusLedger(unittest.TestCase):
+    def setUp(self):
+        self.dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_tmp_bonus")
+        os.makedirs(self.dir, exist_ok=True)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_doubling_respects_the_ceiling(self):
+        led = Ledger(40000, self.dir)
+        self.assertEqual(led.double(4), 40000)      # 40k -> 80k
+        self.assertEqual(led.remaining, 80000)
+        self.assertEqual(led.double(4), 80000)      # 80k -> 160k, the ceiling
+        self.assertEqual(led.remaining, 160000)
+        self.assertEqual(led.double(4), 0, "nothing above four times the start")
+        self.assertEqual(led.remaining, 160000)
+
+    def test_doubling_nothing_yields_nothing(self):
+        led = Ledger(40000, self.dir)
+        led.debit(40000)
+        self.assertEqual(led.remaining, 0)
+        self.assertEqual(led.double(4), 0)
+
+    def test_partial_double_stops_at_the_ceiling(self):
+        led = Ledger(1000, self.dir)
+        led.credit(2500)          # 3500 in hand, ceiling is 4000
+        self.assertEqual(led.double(4), 500)
+        self.assertEqual(led.remaining, 4000)
+
+
 class TestGameLoop(unittest.TestCase):
     """End-to-end through the real tick loop, with the zero-cost baseline as the brain."""
 
@@ -371,7 +466,9 @@ class TestGameLoop(unittest.TestCase):
     def _play(self, **kw):
         from nomnom.brain import Config, Game
         from nomnom.runtimes import make_runtime
-        cfg = Config(runtime="baseline", out=self.out, quiet=True, ticks=30, seed=1, **kw)
+        kw.setdefault("ticks", 30)
+        kw.setdefault("seed", 1)
+        cfg = Config(runtime="baseline", out=self.out, quiet=True, **kw)
         return Game(cfg, make_runtime("baseline")).run()
 
     def test_a_free_run_costs_nothing_and_still_plays(self):
@@ -396,6 +493,34 @@ class TestGameLoop(unittest.TestCase):
         s = self._play()
         problems, _ = validate_run(s["run_dir"])
         self.assertEqual(problems, [])
+
+    def test_the_glint_doubles_the_budget_through_the_real_loop(self):
+        """A reflex that walks to a corner, then to whatever appears, must get paid."""
+        import nomnom.runtimes as R
+        seeker = (
+            "def act(obs):\n"
+            "    g = obs.get('glint')\n"
+            "    if g:\n"
+            "        dx, dy = g\n"
+            "        if dx: return 'e' if dx > 0 else 'w'\n"
+            "        if dy: return 's' if dy > 0 else 'n'\n"
+            "        return 'stay'\n"
+            "    x, y = obs['pos']\n"
+            "    if x > 0: return 'w'\n"
+            "    if y > 0: return 'n'\n"
+            "    return 'stay'\n")
+        orig = R.GREEDY_REFLEX
+        R.GREEDY_REFLEX = seeker
+        try:
+            s = self._play(ticks=40, seed=1, terrain_density=0, predator=False,
+                           start_energy=400, max_energy=400, initial_food=0, food_every=999)
+        finally:
+            R.GREEDY_REFLEX = orig
+        self.assertGreaterEqual(s["glints_taken"], 1, "the seeker never reached it")
+        self.assertGreater(s["bonus_tokens"], 0, "reaching it must pay")
+        self.assertLessEqual(s["tokens_left"], 4 * 40000, "never past four times the start")
+        from nomnom.validate import validate_run
+        self.assertEqual(validate_run(s["run_dir"])[0], [], "a bonus run must still replay")
 
     def test_a_new_run_validates_strictly(self):
         import json as _json

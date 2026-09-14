@@ -41,6 +41,12 @@ One agent, one creature, fifty ticks, and a log you can read end to end.
 - **Foraging earns tokens back.** A colony of two or more earns 400 tokens every time any
   body eats, capped at 20,000 for the run. A lone body earns nothing. This is the only
   income in the game, so growing is an investment that only pays if the bodies keep eating.
+- **There is at least one thing in this world the rules never mention.** The text handed
+  to the agent describes food, hunger, predators, terrain, drift, spawning and income, and
+  nothing else. Anything else an agent meets, it meets without explanation and has to judge
+  for itself. `summary.json` will tell you afterwards whether a run found something; it is
+  deliberately not written down here, and it is not in the rules text either. Pass
+  `--no-secret` to turn the undocumented behaviour off.
 - **Crisis interrupt.** A reflex always returns an action, so a creature running one can
   starve with its budget untouched. When energy falls to 5 or below and a call is still
   affordable, the model is called anyway, at most once every 5 ticks.
@@ -137,7 +143,7 @@ Each run writes to `runs/<timestamp>-<runtime>-<model>-seed<n>/`:
 | `reports.jsonl` | the agent's strategy reports |
 | `creature/notes.md` | the agent's current self-authored notes |
 | `creature/reflex.py` | the agent's current reflex, plus every prior version |
-| `summary.json` | survival, food, tokens, calls, reflex ticks, self-prompts, dollar cost, any overdraft, who ran it |
+| `summary.json` | survival, food, tokens, calls, reflex ticks, colony, earnings, any overdraft, who ran it |
 | `config.json` | log format version, full config, and the exact rules text the agent saw |
 
 ## Token accounting
@@ -296,6 +302,18 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
   stale reflex can be rescued by a shift rather than broken by one.
 - **Models know what they have spent.** One report's arithmetic on its own spend was exact
   to the token. What they misjudge is the cost of the reports themselves.
+
+## Honest notes on the undocumented part
+
+Keeping something out of the rules is only interesting if an agent can still run into it.
+A mechanic nothing ever reveals would simply never fire, so what an agent cannot be told it
+can still be shown: the observation carries the object, with a name that explains nothing
+and no entry in the rules. What is being measured is whether a model investigates an
+unexplained thing or ignores anything it was not briefed on.
+
+Measured with the free hand-written reflex, which only knows about food, something
+appeared in 2 of 16 seeds and was collected in none of them. That is the baseline to beat.
+No paid run has found it yet.
 
 ## Known limits
 

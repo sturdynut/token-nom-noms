@@ -1,0 +1,57 @@
+{
+  "format": 2,
+  "run_dir": "runs/20260914-130355-claude-fable-seed3",
+  "by": "Matti Salokangas",
+  "runtime": "claude",
+  "model": "fable",
+  "models_billed": [
+    "claude-fable-5-1",
+    "claude-haiku-4-5-20251001"
+  ],
+  "seed": 3,
+  "survived_ticks": 50,
+  "max_ticks": 50,
+  "alive": true,
+  "cause_of_death": null,
+  "food_eaten": 17,
+  "final_energy": 4,
+  "budget": 40000,
+  "tokens_spent": 35540,
+  "tokens_earned": 6400,
+  "glints_taken": 0,
+  "bonus_tokens": 0,
+  "spawn_costs": 6000,
+  "peak_colony": 3,
+  "deaths": 2,
+  "tokens_left": 10860,
+  "overdraft": 0,
+  "model_calls": 11,
+  "cost_usd": 0.8114,
+  "reflex_versions": 2,
+  "drifts": [
+    {
+      "tick": 15,
+      "kind": "camping_predator",
+      "detail": "predators now camp the nearest food instead of chasing you"
+    },
+    {
+      "tick": 30,
+      "kind": "fast_predator",
+      "detail": "predators now move every tick"
+    },
+    {
+      "tick": 45,
+      "kind": "second_predator",
+      "detail": "a second predator appeared at [0, 0]"
+    }
+  ],
+  "model_ticks": 7,
+  "reflex_ticks": 43,
+  "idle_ticks": 0,
+  "crisis_calls": 6,
+  "spawns": 3,
+  "think_calls": 0,
+  "report_calls": 4,
+  "parse_errors": 0,
+  "call_errors": 0
+}

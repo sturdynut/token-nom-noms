@@ -40,6 +40,7 @@ class World:
         income_per_food: int = 400,
         income_cap: int = 20000,
         income_min_colony: int = 2,
+        secret: bool = False,
     ):
         self.rng = random.Random(seed)
         self.size = size
@@ -59,6 +60,12 @@ class World:
         self.income_min_colony = income_min_colony
         self.earned = 0
         self.earned_this_tick = 0
+        # Undocumented. Touch a corner and something appears in a corner across the board.
+        # The rules text never mentions any of this; an agent has to notice and gamble.
+        self.secret = secret
+        self.glint = None
+        self.glints_taken = 0
+        self.glint_this_tick = False
         self.spawns = 0
         self.deaths = 0
         self.peak_colony = 1
@@ -197,6 +204,8 @@ class World:
     def _empty_cells(self):
         occupied = (set(self.food) | {c["pos"] for c in self.critters} | set(self.predators)
                     | self.rocks | self.pits | self.traps)
+        if self.glint is not None:
+            occupied.add(self.glint)
         return [
             (x, y)
             for x in range(self.size)
@@ -243,6 +252,8 @@ class World:
             "pit_cost": self.pit_cost,
             "trap_cost": self.trap_cost,
         }
+        if self.glint is not None:
+            obs["glint"] = rel(self.glint)
         if self.spawning:
             obs["id"] = me["id"]
             obs["colony"] = [{"id": c["id"], "rel": rel(c["pos"]), "energy": c["energy"]}
@@ -255,6 +266,42 @@ class World:
             obs["income_per_food"] = self.income_per_food
             obs["income_min_colony"] = self.income_min_colony
         return obs
+
+    def corners(self):
+        n = self.size - 1
+        return [(0, 0), (n, 0), (0, n), (n, n)]
+
+    def _tend_secret(self, events, tag):
+        """A corner touch calls something to a corner across the board; reaching it pays."""
+        if not self.secret:
+            return
+        corners = self.corners()
+        for c in self.living:
+            if self.glint is not None and c["pos"] == self.glint:
+                self.glint = None
+                self.glints_taken += 1
+                self.glint_this_tick = True
+                events.append(tag(c, "REACHED THE GLINT"))
+                return
+        if self.glint is not None:
+            return
+        for c in self.living:
+            if c["pos"] in corners:
+                # A corner sharing exactly one axis, so the trip is the long way along a
+                # wall. Whatever terrain sits there is cleared: a rock in both adjacent
+                # corners would otherwise make the secret unreachable on that map.
+                far = [k for k in corners
+                       if (k[0] == c["pos"][0]) != (k[1] == c["pos"][1])]
+                if not far:
+                    continue
+                self.glint = self.rng.choice(sorted(far))
+                self.food.discard(self.glint)
+                self.rocks.discard(self.glint)
+                self.pits.discard(self.glint)
+                self.traps.discard(self.glint)
+                self.known_traps.discard(self.glint)
+                events.append(tag(c, "something glints in the far corner"))
+                return
 
     def _spawn_at(self, parent) -> bool:
         """Put a new body next to a parent. Fails if it is boxed in or the colony is full."""
@@ -314,6 +361,7 @@ class World:
             "rocks": sorted(list(r) for r in self.rocks),
             "pits": sorted(list(p) for p in self.pits),
             "traps_known": sorted(list(t) for t in self.known_traps),
+            "glint": list(self.glint) if self.glint is not None else None,
             "food": sorted(list(f) for f in self.food),
             "energy": self.energy,
             "max_energy": self.current_max_energy(),
@@ -335,6 +383,7 @@ class World:
         events = []
         self.tick_no += 1
         self.earned_this_tick = 0
+        self.glint_this_tick = False
         if isinstance(actions, str):
             actions = {self.living[0]["id"]: actions}
         else:
@@ -372,6 +421,7 @@ class World:
                 events.append(tag(c, "bumped wall"))
 
         self._sense_traps()
+        self._tend_secret(events, tag)
 
         # --- eat, and earn once the colony is big enough to forage as a group ----
         for c in self.living:
@@ -464,6 +514,8 @@ class World:
                     row.append("O")
                 elif c in self.known_traps:
                     row.append("^")
+                elif self.glint is not None and c == self.glint:
+                    row.append("$")
                 else:
                     row.append(".")
             rows.append(" ".join(row))

@@ -1,0 +1,1 @@
+Reflex handles all: BFS to food, predator avoidance, urgency weighting when energy<=15, spawn to colony 3 at energy>=24. Reply minimally on reports/crisis, no think.

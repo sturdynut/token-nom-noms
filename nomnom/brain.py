@@ -41,6 +41,8 @@ class Config:
         self.max_colony = 6
         self.income_per_food = 400
         self.income_cap = 20000
+        self.secret = True
+        self.secret_cap_multiple = 4
         self.pit_cost = 6
         self.trap_cost = 8
         self.crisis_energy = 5
@@ -140,6 +142,7 @@ class Game:
             pit_cost=cfg.pit_cost, trap_cost=cfg.trap_cost, spawning=cfg.spawning,
             spawn_energy=cfg.spawn_energy, max_colony=cfg.max_colony,
             income_per_food=cfg.income_per_food, income_cap=cfg.income_cap,
+            secret=cfg.secret,
         )
         self.ledger = Ledger(cfg.budget, self.run_dir)
         self.creature = Creature(os.path.join(self.run_dir, "creature"))
@@ -299,18 +302,23 @@ class Game:
                 self.stats["spawns"] += paid_spawns
             if w.earned_this_tick:
                 self.ledger.credit(w.earned_this_tick)
+            bonus = 0
+            if w.glint_this_tick:
+                bonus = self.ledger.double(self.cfg.secret_cap_multiple)
+                self._say("  *** the glint doubled the budget: +%d ***" % bonus)
             action = actions.get(lead, "stay")
             source = ("model" if any(s not in ("reflex", "idle") for s in sources.values())
                       else "reflex" if "reflex" in sources.values() else "idle")
             bucket = ("reflex_ticks" if source == "reflex"
                       else "idle_ticks" if source == "idle" else "model_ticks")
             self.stats[bucket] += 1
-            tick_cost = max(0, budget_before + w.earned_this_tick - self.ledger.remaining)
+            tick_cost = max(0, budget_before + w.earned_this_tick + bonus - self.ledger.remaining)
             self.last_calls = [c for c in self.last_calls if c["tick"] == tick]
             self._last_tick_entry = entry = {
                 "tick": tick, "obs": lead_obs, "source": source, "action": action,
                 "actions": actions, "sources": sources, "colony": len(w.living),
                 "earned_this_tick": w.earned_this_tick, "spawn_spend": spawn_spend,
+                "bonus": bonus,
                 "events": events,
                 "state": w.state(),
                 "energy_after": w.energy, "eaten_total": w.eaten, "alive": w.alive,
@@ -352,10 +360,13 @@ class Game:
             "budget": self.cfg.budget,
             "tokens_spent": self.ledger.spent,
             "tokens_earned": self.ledger.earned,
+            "glints_taken": w.glints_taken,
+            "bonus_tokens": self.ledger.bonus,
             "spawn_costs": self.ledger.other_costs,
             "peak_colony": w.peak_colony,
             "deaths": w.deaths,
-            "tokens_left": self.cfg.budget + self.ledger.earned - self.ledger.spent,
+            "tokens_left": (self.cfg.budget + self.ledger.earned + self.ledger.bonus
+                            - self.ledger.spent),
             "overdraft": self.ledger.overdraft,
             "model_calls": self.ledger.calls,
             "cost_usd": round(self.ledger.cost_usd, 4),

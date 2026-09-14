@@ -323,6 +323,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       <span><i class="sw" style="background:var(--rock);border:1px solid var(--rock-edge)"></i>rock</span>
       <span><i class="sw round" style="background:var(--pit);border:1px solid var(--pit-edge)"></i>pit</span>
       <span><i class="sw" style="background:transparent;color:var(--trap);font-weight:700;font-size:13px;line-height:12px;text-align:center">&times;</i>trap found</span>
+      <span id="glintkey" hidden><i class="sw" style="background:var(--food-fill);border:1px solid var(--food);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)"></i>?</span>
       <span><i class="sw round" style="border:2px solid var(--model)"></i>paid thought this tick</span>
     </div>
   </div>
@@ -538,6 +539,21 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       ctx.beginPath(); ctx.ellipse(cx(x), cx(y), cell * 0.34, cell * 0.26, 0, 0, 7);
       ctx.fill(); ctx.stroke();
     });
+    if (st.glint) {
+      const [gx, gy] = st.glint, r = cell * 0.3, t = (Date.now() / 600) % 1;
+      ctx.save();
+      ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI));
+      ctx.strokeStyle = css('--food'); ctx.fillStyle = css('--food-fill');
+      ctx.lineWidth = Math.max(1.5, cell * 0.05);
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 - Math.PI / 2, rr = k % 2 ? r * 0.42 : r;
+        const px = cx(gx) + Math.cos(a) * rr, py = cx(gy) + Math.sin(a) * rr;
+        k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
     (st.traps_known || []).forEach(([x, y]) => {
       ctx.strokeStyle = css('--trap'); ctx.lineWidth = Math.max(1.5, cell * 0.055);
       const r = cell * 0.24;
@@ -590,6 +606,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('src').innerHTML = '<span class="chip ' + src + '">' + esc(src === 'model' ? 'model' + (t.source !== 'model' ? ' (' + t.source.replace(/_/g, ' ') + ')' : '') : src) + '</span>';
     $('act').textContent = t.action; $('cost').textContent = fmt(t.tick_cost);
     $('reflexv').textContent = t.reflex_version ? 'v' + t.reflex_version + (t.reflex_error ? ' · error' : '') : 'none';
+    $('glintkey').hidden = !st.glint;
     const colony = t.colony || (st.critters || []).filter(b => b.alive).length;
     const hasColony = (st.critters || []).length > 1 || (st.earned || 0) > 0;
     $('colonyfact').hidden = !hasColony; $('earnedfact').hidden = !hasColony;
@@ -598,6 +615,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       $('earned').textContent = fmt(st.earned || 0) + (t.earned_this_tick ? '  +' + fmt(t.earned_this_tick) : '');
     }
     const ev = t.events.length ? t.events.join(', ') : 'nothing';
+    if (t.bonus) ev += ', the glint paid out +' + fmt(t.bonus) + ' tokens';
     $('events').innerHTML = esc(ev.replace(/, DRIFT: [^,]*$/, '')) + (t.drift ? '\n<b style="color:var(--food)">WORLD SHIFTED · ' + esc(t.drift) + '</b>' : '') + (t.reflex_error ? '\n<span style="color:var(--predator)">reflex error: ' + esc(t.reflex_error) + '</span>' : '');
     const rules = []; if (st.predator_mode === 'camp') rules.push('predators camp food'); const drifts = run.ticks.slice(0, i + 1).filter(x => x.drift).map(x => x.drift);
     $('world').textContent = drifts.length ? drifts.join(' · ') : 'no shifts yet';

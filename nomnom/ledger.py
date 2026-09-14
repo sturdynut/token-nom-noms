@@ -15,6 +15,7 @@ class Ledger:
         self.spent = 0
         self.earned = 0
         self.other_costs = 0
+        self.bonus = 0
         self.last_charge = 0
         self.calls = 0
         self.cost_usd = 0.0
@@ -81,6 +82,19 @@ class Ledger:
         self.remaining = max(0, self.remaining - n)
         self.other_costs += n
 
+    def double(self, cap_multiple: int = 4) -> int:
+        """Double what is left, never past cap_multiple times the starting budget.
+
+        Doubling nothing yields nothing, so this rewards finding it while still solvent.
+        Returns the bonus granted.
+        """
+        ceiling = self.budget * cap_multiple
+        bonus = max(0, min(self.remaining, ceiling - self.remaining))
+        if bonus:
+            self.remaining += bonus
+            self.bonus += bonus
+        return bonus
+
     def credit(self, n: int):
         """Income from foraging. It raises what is left to spend but never the ceiling
         on what the run may earn, which the world caps."""
@@ -92,7 +106,7 @@ class Ledger:
     @property
     def overdraft(self) -> int:
         """Tokens spent beyond the budget. Zero unless the last call overran."""
-        return max(0, self.spent - (self.budget + self.earned))
+        return max(0, self.spent - (self.budget + self.earned + self.bonus))
 
     def record_tick(self, entry: dict):
         self._append(self._ticks_path, entry)

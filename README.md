@@ -11,7 +11,7 @@ costs tokens from a fixed budget. The agent can only act by prompting itself.
 The point of the game is to survive. The point of the project is to harvest
 the token-efficiency strategies the agents invent under scarcity.
 
-## Milestone 1 (this version)
+## The game
 
 One agent, one creature, fifty ticks, and a log you can read end to end.
 
@@ -34,6 +34,13 @@ One agent, one creature, fifty ticks, and a log you can read end to end.
   paid and cannot be declined. The report shows the agent its own reflex, and a report
   reply may replace the notes or the reflex, which for a creature running a reflex is
   its only chance to change anything.
+- **A colony, not a creature.** One mind, up to six bodies. `spawn` costs 2,000 tokens and
+  moves 10 energy from the parent to the newborn, so growth is paid for twice. Every living
+  body needs an action every tick and the agent is asked once per body, so a second body
+  doubles what thinking costs. Bodies die one at a time; the colony ends with the last one.
+- **Foraging earns tokens back.** A colony of two or more earns 400 tokens every time any
+  body eats, capped at 20,000 for the run. A lone body earns nothing. This is the only
+  income in the game, so growing is an investment that only pays if the bodies keep eating.
 - **Crisis interrupt.** A reflex always returns an action, so a creature running one can
   starve with its budget untouched. When energy falls to 5 or below and a call is still
   affordable, the model is called anyway, at most once every 5 ticks.
@@ -217,6 +224,24 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
 
   Spend runs backwards against capability. Fable was both the cheapest survivor and the best
   forager, on roughly half of Sonnet's budget.
+- **Given an economy, the strongest model compiled the economy into code.** Fable's reflex
+  under the colony rules runs a breadth-first search to food, avoids rocks, traps and
+  predator-adjacent cells, routes around its own siblings so two bodies never contest a
+  square, and carries the investment rule itself: spawn only when the colony is under three,
+  energy is at least 22, nothing dangerous is adjacent, and a safe free cell exists. It never
+  paid for a per-tick decision. It bought a monetary policy once and ran it for free.
+
+  | | solo rules | colony rules |
+  | --- | ---: | ---: |
+  | ticks survived | 50 | 50 |
+  | food eaten | 16 | 21 |
+  | tokens earned back | — | 8,000 |
+  | spawns paid for | — | 5 |
+  | peak bodies | 1 | 3 |
+
+  Net, the colony cost 2,000 tokens more than it earned and bought five extra meals and a
+  spare body. Four bodies died along the way and it kept respawning, which is the tradeoff
+  working as intended rather than a failure.
 - **All four Codex models survived, and paid dearly for the privilege.** Astra, Terra, Sol
   and Luna each wrote a reflex on the first move and finished all fifty ticks on seed 1.
   But Codex carries its own agent instructions on every call, so its input cost per thought
@@ -290,7 +315,11 @@ is the hardest setting for a naive reflex here and stays readable on a 10x10 gri
 
 - A second agent playing the predator, on its own budget, so the pressure adapts instead
   of running to a schedule. Partial sight on both sides is what would make it need a brain.
-- Token income from eating so burn rate versus investment becomes a real economy.
+- A spell book: an agent names a reflex it wrote and casts it onto a body for a fraction of
+  what writing it cost, with the book persisting across runs so agents can pay to read what
+  earlier agents discovered.
+- Declarative creature design: compose a body from priced traits rather than arbitrary code,
+  so invention stays comparable between runs.
 - Evolution gated on survival plus skills, not just age. Stages currently only raise the
   energy ceiling.
 - Multiple creatures in one world, one per runtime.

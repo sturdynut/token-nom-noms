@@ -8,7 +8,7 @@ import time
 from .ledger import Ledger
 from .prompts import THINK_SYSTEM, report_prompt, rules_text, tick_prompt
 from .reflex import run_reflex
-from .world import ACTIONS, World
+from .world import ACTIONS, SPAWN, World
 
 
 # Bumped when a change to the world or the log shape makes older runs unreplayable by
@@ -35,6 +35,12 @@ class Config:
         self.drift_every = 15
         self.stage_growth = True
         self.terrain_density = 0.12
+        self.spawning = True
+        self.spawn_cost = 2000
+        self.spawn_energy = 10
+        self.max_colony = 6
+        self.income_per_food = 400
+        self.income_cap = 20000
         self.pit_cost = 6
         self.trap_cost = 8
         self.crisis_energy = 5
@@ -131,7 +137,9 @@ class Game:
             food_value=cfg.food_value, initial_food=cfg.initial_food, food_every=cfg.food_every,
             predator=cfg.predator, predator_every=cfg.predator_every, drift_every=cfg.drift_every,
             stage_growth=cfg.stage_growth, terrain_density=cfg.terrain_density,
-            pit_cost=cfg.pit_cost, trap_cost=cfg.trap_cost,
+            pit_cost=cfg.pit_cost, trap_cost=cfg.trap_cost, spawning=cfg.spawning,
+            spawn_energy=cfg.spawn_energy, max_colony=cfg.max_colony,
+            income_per_food=cfg.income_per_food, income_cap=cfg.income_cap,
         )
         self.ledger = Ledger(cfg.budget, self.run_dir)
         self.creature = Creature(os.path.join(self.run_dir, "creature"))
@@ -139,6 +147,7 @@ class Game:
         self._last_crisis = -10 ** 9
         self.models_seen = set()
         self.stats = {"model_ticks": 0, "reflex_ticks": 0, "idle_ticks": 0, "crisis_calls": 0,
+                      "spawns": 0,
                       "think_calls": 0, "report_calls": 0, "parse_errors": 0, "call_errors": 0}
         with open(os.path.join(self.run_dir, "config.json"), "w") as f:
             json.dump({"format": LOG_FORMAT, "config": cfg.as_dict(), "runtime": runtime.name,
@@ -227,51 +236,82 @@ class Game:
         self._say("runtime=%s model=%s budget=%d ticks=%d seed=%d" % (
             self.runtime.name, self.runtime.model, self.cfg.budget, self.cfg.ticks, self.cfg.seed))
         for tick in range(1, self.cfg.ticks + 1):
-            obs = w.observe()
-            obs["tick"] = tick
-            obs["budget"] = self.ledger.remaining
             budget_before = self.ledger.remaining
-            action, source, reflex_err = None, "idle", None
+            actions, sources, reflex_err = {}, {}, None
+            lead = w.living[0]["id"]
+            lead_obs = None
 
-            if self.creature.reflex_src and not self.creature.reflex_error:
-                action, reflex_err = run_reflex(self.creature.reflex_src, obs)
-                if reflex_err:
-                    self.creature.reflex_error = reflex_err
-                    self.creature.reflex_last = "ERROR"
-                    action = None
-                elif action in ACTIONS:
-                    self.creature.reflex_last = repr(action)
-                    source = "reflex"
-                else:
-                    self.creature.reflex_last = "None"
-                    action = None
+            # One brain, many bodies. Every body needs a decision, and every decision the
+            # reflex cannot make is charged, so a bigger colony is more expensive to think
+            # about even as it earns more.
+            for body in list(w.living):
+                obs = w.observe(body["id"])
+                obs["tick"] = tick
+                obs["budget"] = self.ledger.remaining
+                if body["id"] == lead:
+                    lead_obs = obs
+                action, source, err = None, "idle", None
 
-            # A reflex always returns an action, so a creature running one can starve with
-            # its budget untouched: nothing in the loop ever forces a spend. When energy is
-            # critical and a call is still affordable, override the reflex and think.
-            if (source == "reflex" and self.cfg.crisis_energy
-                    and obs["energy"] <= self.cfg.crisis_energy
-                    and self.ledger.remaining > 0
-                    and tick - self._last_crisis >= self.cfg.crisis_cooldown):
-                self._last_crisis = tick
-                self.stats["crisis_calls"] += 1
-                self._say("  crisis: energy %d, overriding reflex" % obs["energy"])
-                action, source = self._decide_with_model(obs, tick)
-                source = "crisis" if source == "model" else source
+                if self.creature.reflex_src and not self.creature.reflex_error:
+                    action, err = run_reflex(self.creature.reflex_src, obs)
+                    if err:
+                        self.creature.reflex_error = err
+                        self.creature.reflex_last = "ERROR"
+                        reflex_err = err
+                        action = None
+                    elif action in ACTIONS:
+                        self.creature.reflex_last = repr(action)
+                        source = "reflex"
+                    else:
+                        self.creature.reflex_last = "None"
+                        action = None
 
-            if action is None and self.ledger.remaining > 0:
-                action, source = self._decide_with_model(obs, tick)
-            if action is None:
-                action, source = "stay", "idle"
+                # A reflex always returns an action, so a colony running one can starve with
+                # its budget untouched: nothing in the loop ever forces a spend. When a body
+                # is close to death and a call is still affordable, override and think.
+                if (source == "reflex" and self.cfg.crisis_energy
+                        and obs["energy"] <= self.cfg.crisis_energy
+                        and self.ledger.remaining > 0
+                        and tick - self._last_crisis >= self.cfg.crisis_cooldown):
+                    self._last_crisis = tick
+                    self.stats["crisis_calls"] += 1
+                    self._say("  crisis: body #%d at energy %d, overriding reflex"
+                              % (body["id"], obs["energy"]))
+                    action, source = self._decide_with_model(obs, tick)
+                    source = "crisis" if source == "model" else source
 
-            events = w.step(action)
+                if action is None and self.ledger.remaining > 0:
+                    action, source = self._decide_with_model(obs, tick)
+                if action is None:
+                    action, source = "stay", "idle"
+                if action == SPAWN and self.ledger.remaining < self.cfg.spawn_cost:
+                    action = "stay"
+                    self._say("  body #%d wanted to spawn but cannot afford it" % body["id"])
+                actions[body["id"]] = action
+                sources[body["id"]] = source
+
+            spawns_before = w.spawns
+            events = w.step(actions)
+            paid_spawns = w.spawns - spawns_before
+            spawn_spend = paid_spawns * self.cfg.spawn_cost
+            if paid_spawns:
+                self.ledger.debit(spawn_spend)
+                self.stats["spawns"] += paid_spawns
+            if w.earned_this_tick:
+                self.ledger.credit(w.earned_this_tick)
+            action = actions.get(lead, "stay")
+            source = ("model" if any(s not in ("reflex", "idle") for s in sources.values())
+                      else "reflex" if "reflex" in sources.values() else "idle")
             bucket = ("reflex_ticks" if source == "reflex"
                       else "idle_ticks" if source == "idle" else "model_ticks")
             self.stats[bucket] += 1
-            tick_cost = budget_before - self.ledger.remaining
+            tick_cost = max(0, budget_before + w.earned_this_tick - self.ledger.remaining)
             self.last_calls = [c for c in self.last_calls if c["tick"] == tick]
             self._last_tick_entry = entry = {
-                "tick": tick, "obs": obs, "source": source, "action": action, "events": events,
+                "tick": tick, "obs": lead_obs, "source": source, "action": action,
+                "actions": actions, "sources": sources, "colony": len(w.living),
+                "earned_this_tick": w.earned_this_tick, "spawn_spend": spawn_spend,
+                "events": events,
                 "state": w.state(),
                 "energy_after": w.energy, "eaten_total": w.eaten, "alive": w.alive,
                 "budget_after": self.ledger.remaining, "tick_cost": tick_cost,
@@ -284,9 +324,9 @@ class Game:
                 from .viz import render_frame
                 print(render_frame(self.last_tick_entry(), self.cfg.as_dict(), self.run_dir, self.last_calls), flush=True)
             else:
-                self._say("tick %2d | %-11s | %-4s | energy %2d | food %d | pred %-9s | cost %5d | left %6d | %s" % (
-                    tick, source, action, w.energy, len(w.food),
-                    str(obs["predator"]), tick_cost, self.ledger.remaining, ", ".join(events)))
+                self._say("tick %2d | %-11s | %-5s | col %d | energy %2d | food %d | cost %5d | left %6d | %s" % (
+                    tick, source, action, len(w.living), w.energy, len(w.food),
+                    tick_cost, self.ledger.remaining, ", ".join(events)))
 
             if not w.alive:
                 break
@@ -311,7 +351,11 @@ class Game:
             "final_energy": w.energy,
             "budget": self.cfg.budget,
             "tokens_spent": self.ledger.spent,
-            "tokens_left": self.cfg.budget - self.ledger.spent,
+            "tokens_earned": self.ledger.earned,
+            "spawn_costs": self.ledger.other_costs,
+            "peak_colony": w.peak_colony,
+            "deaths": w.deaths,
+            "tokens_left": self.cfg.budget + self.ledger.earned - self.ledger.spent,
             "overdraft": self.ledger.overdraft,
             "model_calls": self.ledger.calls,
             "cost_usd": round(self.ledger.cost_usd, 4),

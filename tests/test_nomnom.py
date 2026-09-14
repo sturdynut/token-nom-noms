@@ -12,7 +12,7 @@ from nomnom.brain import extract_json  # noqa: E402
 from nomnom.ledger import Ledger  # noqa: E402
 from nomnom.reflex import run_reflex  # noqa: E402
 from nomnom.runtimes import CallResult, GREEDY_REFLEX  # noqa: E402
-from nomnom.world import World, stage_for  # noqa: E402
+from nomnom.world import SPAWN, World, stage_for  # noqa: E402
 
 
 class TestExtractJson(unittest.TestCase):
@@ -155,8 +155,9 @@ class TestWorld(unittest.TestCase):
                 if e.startswith("DRIFT: "):
                     kinds.append(w.drifts[-1]["kind"])
             if not w.alive:
-                w.alive = True  # keep stepping; we only care about the drift schedule
-                w.energy = 20
+                # Revive the body; this test only cares about the drift schedule.
+                w.critters[0]["alive"] = True
+                w.critters[0]["energy"] = 20
         self.assertEqual(len(kinds), 4)
         self.assertEqual(sorted(kinds), ["camping_predator", "fast_predator",
                                          "scarce_food", "second_predator"])
@@ -268,6 +269,93 @@ class TestTerrain(unittest.TestCase):
         w._sense_traps()
         seen = {tuple(t) for t in w.observe()["traps_known"]}
         self.assertEqual(seen, {(0, -1)}, "a distant trap must stay hidden")
+
+
+class TestColony(unittest.TestCase):
+    def _w(self, **kw):
+        kw.setdefault("spawning", True)
+        kw.setdefault("initial_food", 0)
+        kw.setdefault("predator", False)
+        kw.setdefault("drift_every", 0)
+        return World(seed=5, **kw)
+
+    def test_spawning_off_by_default(self):
+        w = World(seed=5)
+        self.assertFalse(w.spawning)
+        self.assertEqual(len(w.critters), 1)
+        w.step(SPAWN)
+        self.assertEqual(len(w.critters), 1, "no colony without the flag")
+
+    def test_spawn_moves_energy_from_parent_to_child(self):
+        w = self._w(start_energy=30, spawn_energy=10)
+        w.step(SPAWN)
+        self.assertEqual(len(w.living), 2)
+        parent, child = w.critters[0], w.critters[1]
+        # parent pays 10 and then every body pays the per-tick drain
+        self.assertEqual(parent["energy"], 30 - 10 - 1)
+        self.assertEqual(child["energy"], 10 - 1)
+
+    def test_a_body_too_poor_to_spawn_does_not(self):
+        w = self._w(start_energy=10, spawn_energy=10)
+        events = w.step(SPAWN)
+        self.assertEqual(len(w.living), 1)
+        self.assertTrue(any("could not spawn" in e for e in events))
+
+    def test_colony_is_capped(self):
+        w = self._w(start_energy=30, max_colony=2)
+        w.step(SPAWN)
+        self.assertEqual(len(w.living), 2)
+        w.step({0: SPAWN, 1: "stay"})
+        self.assertEqual(len(w.living), 2, "cap must hold")
+
+    def test_the_colony_outlives_one_body(self):
+        w = self._w(start_energy=30)
+        w.step(SPAWN)
+        w.critters[1]["energy"] = 1
+        w.step({0: "stay", 1: "stay"})
+        self.assertFalse(w.critters[1]["alive"])
+        self.assertTrue(w.alive, "the colony survives while the founder lives")
+        self.assertEqual(w.deaths, 1)
+
+    def test_a_lone_body_earns_nothing(self):
+        w = self._w(start_energy=30)
+        w.food = {(5, 4)}
+        w.step("n")
+        self.assertEqual(w.earned, 0)
+
+    def test_a_pair_earns_on_every_meal(self):
+        w = self._w(start_energy=30, income_per_food=400)
+        w.step(SPAWN)
+        w.critters[0]["pos"] = (5, 5)
+        w.food = {(5, 4)}
+        w.step({0: "n", 1: "stay"})
+        self.assertEqual(w.earned, 400)
+        self.assertEqual(w.earned_this_tick, 400)
+
+    def test_earnings_stop_at_the_cap(self):
+        w = self._w(start_energy=30, income_per_food=400, income_cap=500)
+        w.step(SPAWN)
+        for _ in range(4):
+            w.critters[0]["energy"] = 30
+            x, y = w.critters[0]["pos"]
+            w.food = {(x, y - 1)}
+            w.step({0: "n", 1: "stay"})
+        self.assertEqual(w.earned, 500, "the cap is the cap")
+
+    def test_every_body_is_asked_and_each_acts(self):
+        w = self._w(start_energy=30)
+        w.step(SPAWN)
+        a, b = w.critters[0]["pos"], w.critters[1]["pos"]
+        w.step({0: "s", 1: "s"})
+        self.assertEqual(w.critters[0]["pos"], (a[0], a[1] + 1))
+        self.assertEqual(w.critters[1]["pos"], (b[0], b[1] + 1))
+
+    def test_json_string_body_ids_still_address_the_right_body(self):
+        w = self._w(start_energy=30)
+        w.step(SPAWN)
+        before = w.critters[1]["pos"]
+        w.step({"0": "stay", "1": "s"})
+        self.assertEqual(w.critters[1]["pos"], (before[0], before[1] + 1))
 
 
 class TestGameLoop(unittest.TestCase):

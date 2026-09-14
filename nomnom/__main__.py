@@ -26,6 +26,9 @@ def main(argv=None):
     r.add_argument("--drift-every", type=int, default=15, dest="drift_every", help="ticks between silent world shifts (0 disables)")
     r.add_argument("--crisis-energy", type=int, default=5, dest="crisis_energy", help="energy at or below which the model overrides the reflex (0 disables)")
     r.add_argument("--terrain", type=float, default=0.12, dest="terrain_density", help="share of cells holding a rock, pit or hidden trap (0 for open ground)")
+    r.add_argument("--no-spawning", action="store_true", help="one body only, no colony and no token income")
+    r.add_argument("--spawn-cost", type=int, default=2000, dest="spawn_cost", help="tokens charged per new body")
+    r.add_argument("--income-cap", type=int, default=20000, dest="income_cap", help="most a run can earn back by foraging")
     r.add_argument("--timeout", type=int, default=180, help="seconds per model call")
     r.add_argument("--out", default="runs")
     r.add_argument("--quiet", action="store_true")
@@ -57,6 +60,7 @@ def main(argv=None):
                      size=a.size, max_think=a.max_think, report_every=a.report_every,
                      predator=not a.no_predator, drift_every=a.drift_every,
                      crisis_energy=a.crisis_energy, terrain_density=a.terrain_density,
+                     spawning=not a.no_spawning, spawn_cost=a.spawn_cost, income_cap=a.income_cap,
                      timeout=a.timeout, out=a.out, quiet=a.quiet,
                      watch=a.watch, effort=a.effort, by=a.by)
         runtime = make_runtime(a.runtime, a.model, a.timeout, a.effort)

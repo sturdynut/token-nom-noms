@@ -27,7 +27,8 @@ def collect(runs_dir: str) -> list:
         s["_label"] = (s.get("model") or "") + (" (%s effort)" % c["effort"] if c.get("effort") else "")
         s["_benchmark"] = (not s["_reference"] and c.get("seed") in BENCHMARK_SEEDS
                            and c.get("budget") == 40000 and c.get("ticks") == 50
-                           and s["_drift"] == 15 and s["_terrain"] == 0.12)
+                           and s["_drift"] == 15 and s["_terrain"] == 0.12
+                           and c.get("spawning", False))
         # Tokens per tick is only meaningful next to the outcome it bought: a creature
         # that dies early on a small spend scores well on it and badly at the game.
         s["_per_tick"] = round(s["tokens_spent"] / max(1, s["survived_ticks"]), 1)
@@ -43,15 +44,19 @@ def _row(r, baseline=None):
     if baseline is not None:
         d = r["survived_ticks"] - baseline["survived_ticks"]
         beat = "same" if d == 0 else ("+%d" % d if d > 0 else str(d))
-    return "| %s | %d/%d | %s | %s | %s | %s | %s | %s | %s | %d | %d | %d | %d | %.3f | [%s](%s) |" % (
+    earned = r.get("tokens_earned") or 0
+    peak = r.get("peak_colony") or 1
+    return "| %s | %d/%d | %s | %s | %s | %s | %s | %s | %s | %s | %d | %d | %d | %.3f | [%s](%s) |" % (
         r["_seed"], r["survived_ticks"], r["max_ticks"], "alive" if r["alive"] else r["cause_of_death"],
-        beat, r["runtime"], r["_label"], r.get("by") or "", spend, r["_per_tick"],
-        r["food_eaten"], r["model_calls"], r["reflex_ticks"], r.get("think_calls", 0),
+        beat, r["runtime"], r["_label"], r.get("by") or "", spend,
+        format(earned, ",") if earned else "—",
+        ("%d (%d spawns)" % (peak, r.get("spawns", 0))) if r.get("spawns") else "—",
+        r["food_eaten"], r["model_calls"], r["reflex_ticks"],
         r.get("cost_usd") or 0, r["_dir"], r["_dir"] + "/")
 
 
-HEAD = ("| seed | survived | outcome | vs free | runtime | model | by | tokens spent | tokens/tick | "
-        "food | model calls | reflex ticks | self-prompts | $ | run |")
+HEAD = ("| seed | survived | outcome | vs free | runtime | model | by | tokens spent | earned | "
+        "colony | food | model calls | reflex ticks | $ | run |")
 RULE = "| ---: | ---: | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |"
 
 
@@ -69,10 +74,11 @@ def write_leaderboard(runs_dir: str = "runs") -> str:
         "spent its tokens. Regenerate this file with `python3 -m nomnom leaderboard`.",
         "",
         "**How to read it.** Runs are grouped by seed, because seeds differ enormously in",
-        "difficulty and ranking across them compares nothing. Tokens per tick is not a score:",
-        "a creature that dies early on a small spend looks efficient and played badly. The",
-        "column that matters is **vs free**, which is how many more ticks a run survived than",
-        "the zero-token hand-written reflex on the same seed.",
+        "difficulty and ranking across them compares nothing. The column that matters is",
+        "**vs free**, which is how many more ticks a run survived than the zero-token",
+        "hand-written reflex on the same seed. **Earned** is tokens won back by foraging with",
+        "a colony of two or more, and **colony** is the peak number of bodies alive at once",
+        "with the number of spawns paid for.",
         "",
         "## The free baseline",
         "",
@@ -86,7 +92,8 @@ def write_leaderboard(runs_dir: str = "runs") -> str:
             lines.append(_row(refs[seed]))
 
     lines += ["", "## Benchmark runs", "",
-              "Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain 0.12.",
+              "Seeds 1-5 on the default rules: 40,000 tokens, 50 ticks, drift every 15, terrain 0.12,",
+              "spawning on at 2,000 tokens a body.",
               "", HEAD, RULE]
     if bench:
         for r in bench:

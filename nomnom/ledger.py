@@ -13,6 +13,8 @@ class Ledger:
         self.budget = budget
         self.remaining = budget
         self.spent = 0
+        self.earned = 0
+        self.other_costs = 0
         self.last_charge = 0
         self.calls = 0
         self.cost_usd = 0.0
@@ -71,10 +73,26 @@ class Ledger:
         self._append(self._calls_path, entry)
         return charge
 
+    def debit(self, n: int, why: str = "spawn"):
+        """A cost that is not a model call, such as putting another body on the board."""
+        if n <= 0:
+            return
+        self.spent += n
+        self.remaining = max(0, self.remaining - n)
+        self.other_costs += n
+
+    def credit(self, n: int):
+        """Income from foraging. It raises what is left to spend but never the ceiling
+        on what the run may earn, which the world caps."""
+        if n <= 0:
+            return
+        self.earned += n
+        self.remaining += n
+
     @property
     def overdraft(self) -> int:
         """Tokens spent beyond the budget. Zero unless the last call overran."""
-        return max(0, self.spent - self.budget)
+        return max(0, self.spent - (self.budget + self.earned))
 
     def record_tick(self, entry: dict):
         self._append(self._ticks_path, entry)

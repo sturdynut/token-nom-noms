@@ -1,0 +1,1 @@
+Reflex: BFS to food avoiding rocks/traps/pred-adjacent, pits fallback; spawn at e>=22 while colony<3. Reports only; don't edit reflex unless it clearly fails. Tick46: earned 7200, budget 14.8k, 3 bodies; body5 likely lost (e5). Skip crisis calls when unwinnable.

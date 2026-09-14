@@ -61,15 +61,22 @@ def validate_run(run_dir: str):
     if bool(summary.get("alive")) != bool(ticks[-1]["alive"]):
         problems.append("summary alive flag disagrees with last tick")
     charged = sum(x.get("charged", 0) for x in calls)
-    if summary.get("tokens_spent") != charged:
-        problems.append("summary tokens_spent %s but calls add up to %d" % (summary.get("tokens_spent"), charged))
+    spawn_costs = summary.get("spawn_costs", 0) or 0
+    earned = summary.get("tokens_earned", 0) or 0
+    if summary.get("tokens_spent") != charged + spawn_costs:
+        problems.append("summary tokens_spent %s but calls (%d) plus spawn costs (%d) make %d"
+                        % (summary.get("tokens_spent"), charged, spawn_costs, charged + spawn_costs))
     if summary.get("model_calls") != len(calls):
         problems.append("summary model_calls %s but %d calls logged" % (summary.get("model_calls"), len(calls)))
-    if strict and summary.get("tokens_left") != c["budget"] - charged:
-        problems.append("summary tokens_left %s should be budget minus spend (%d)"
-                        % (summary.get("tokens_left"), c["budget"] - charged))
-    if charged > c["budget"]:
-        notes.append("overdrew the budget by %d tokens on its last call" % (charged - c["budget"]))
+    spent = charged + spawn_costs
+    if strict and summary.get("tokens_left") != c["budget"] + earned - spent:
+        problems.append("summary tokens_left %s should be budget plus earnings minus spend (%d)"
+                        % (summary.get("tokens_left"), c["budget"] + earned - spent))
+    if spent > c["budget"] + earned:
+        notes.append("overdrew by %d tokens on its last call" % (spent - c["budget"] - earned))
+    if earned:
+        notes.append("foraging earned %d tokens back across %d spawn(s)"
+                     % (earned, summary.get("spawns", 0)))
 
     # The simulation is deterministic, so the world can be rebuilt from the seed and the
     # logged actions. Anything that disagrees means the logs and this code are not the
@@ -79,7 +86,10 @@ def validate_run(run_dir: str):
               predator=c["predator"], predator_every=c["predator_every"],
               drift_every=c.get("drift_every", 0), stage_growth=c.get("stage_growth", False),
               terrain_density=c.get("terrain_density", 0.0), pit_cost=c.get("pit_cost", 6),
-              trap_cost=c.get("trap_cost", 8))
+              trap_cost=c.get("trap_cost", 8), spawning=c.get("spawning", False),
+              spawn_energy=c.get("spawn_energy", 10), max_colony=c.get("max_colony", 6),
+              income_per_food=c.get("income_per_food", 400),
+              income_cap=c.get("income_cap", 20000))
     norm = (lambda v: v) if strict else _cells
     for t in ticks:
         expected_obs = t.get("obs")
@@ -92,7 +102,7 @@ def validate_run(run_dir: str):
                     problems.append("tick %d: %s was %s in the log, replay gives %s"
                                     % (t["tick"], k, expected_obs.get(k), got.get(k)))
                     return problems, notes
-        w.step(t["action"])
+        w.step(t.get("actions") or t["action"])
         st = t.get("state")
         if st:
             got = w.state()

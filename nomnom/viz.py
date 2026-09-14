@@ -22,6 +22,7 @@ def absolute_state(entry: dict) -> dict:
     abso = lambda k: [[px + c[0], py + c[1]] for c in (o.get(k) or [])]  # noqa: E731
     return {
         "pos": [px, py],
+        "critters": [{"id": 0, "pos": [px, py], "energy": entry["energy_after"], "alive": entry["alive"]}],
         "rocks": abso("rocks"),
         "pits": abso("pits"),
         "traps_known": abso("traps_known"),
@@ -52,6 +53,9 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
     traps = {tuple(c) for c in (st.get("traps_known") or [])}
     pos = tuple(st["pos"])
     trail = {tuple(p) for p in (trail or [])}
+    bodies = [b for b in (st.get("critters") or [{"id": 0, "pos": st["pos"], "alive": True}]) if b.get("alive")]
+    if not bodies:
+        bodies = [{"id": 0, "pos": st["pos"], "alive": False}]
 
     lines = [CLEAR + BOLD + "token-nom-noms" + RESET + "  " + DIM + run_label + RESET,
              "tick %d/%d   %s" % (entry["tick"], ticks, (RED + BOLD + "DEAD: " + ", ".join(e for e in entry["events"] if e.isupper()) + RESET) if not st["alive"] else "")]
@@ -59,8 +63,10 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
         row = []
         for x in range(size):
             c = (x, y)
-            if c == pos:
-                row.append((GREEN if st["alive"] else RED) + BOLD + "@" + RESET)
+            body = next((b for b in bodies if tuple(b["pos"]) == c), None)
+            if body:
+                glyph = "@" if body["id"] == 0 else str(body["id"] % 10)
+                row.append((GREEN if st["alive"] else RED) + BOLD + glyph + RESET)
             elif c in preds:
                 row.append(RED + BOLD + "P" + RESET)
             elif c in food:
@@ -81,6 +87,10 @@ def render_frame(entry: dict, cfg: dict, run_label: str, calls: list, trail: lis
     lines.append("")
     lines.append("energy  %s %2d/%d" % (bar(st["energy"], max_energy), st["energy"], max_energy))
     lines.append("budget  %s %d/%d" % (bar(entry["budget_after"], budget, color=CYAN), entry["budget_after"], budget))
+    if entry.get("colony") or (st.get("earned") or 0):
+        lines.append("colony  %d alive   earned %d tokens%s" % (
+            entry.get("colony", len(bodies)), st.get("earned") or 0,
+            ("   +%d this tick" % entry["earned_this_tick"]) if entry.get("earned_this_tick") else ""))
     lines.append("source  %s%-11s%s action %s%-4s%s cost %d   reflex v%d" % (
         color, entry["source"], RESET, BOLD, entry["action"], RESET, entry["tick_cost"], entry.get("reflex_version", 0)))
     shown = [e for e in entry["events"] if not e.startswith("DRIFT: ")]

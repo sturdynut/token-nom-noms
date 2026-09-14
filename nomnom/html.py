@@ -24,16 +24,22 @@ def load_run(run_dir: str) -> dict:
     if os.path.exists(summary_path):
         with open(summary_path) as f:
             summary = json.load(f)
+    spawn_cost = cfg["config"].get("spawn_cost", 0)
     for t in ticks:
         t["state"] = absolute_state(t)
         t.pop("obs", None)
+        # Runs recorded before spawn spend was logged still show it: count the spawns
+        # that actually happened on the tick and price them from the run's own config.
+        if "spawn_spend" not in t and spawn_cost:
+            born = sum(1 for e in t.get("events", []) if "spawned a new body" in e)
+            t["spawn_spend"] = born * spawn_cost
     reflex_path = os.path.join(run_dir, "creature", "reflex.py")
     notes_path = os.path.join(run_dir, "creature", "notes.md")
     return {
         "name": os.path.basename(run_dir.rstrip("/")),
         "runtime": cfg["runtime"],
         "model": cfg["model"],
-        "cfg": {k: cfg["config"].get(k) for k in ("size", "budget", "ticks", "max_energy", "seed", "food_value", "predator_every", "drift_every")},
+        "cfg": {k: cfg["config"].get(k) for k in ("size", "budget", "ticks", "max_energy", "seed", "food_value", "predator_every", "drift_every", "spawn_cost", "income_cap")},
         "summary": summary,
         "ticks": ticks,
         "calls": [{k: c.get(k) for k in ("tick", "kind", "depth", "prompt", "response", "input_tokens",
@@ -331,6 +337,8 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
       <div class="fact"><div class="k">action</div><div class="v mono" id="act"></div></div>
       <div class="fact"><div class="k">tokens this tick</div><div class="v num" id="cost"></div></div>
       <div class="fact"><div class="k">reflex</div><div class="v" id="reflexv"></div></div>
+      <div class="fact" id="colonyfact" hidden><div class="k">colony</div><div class="v num" id="colony"></div></div>
+      <div class="fact" id="earnedfact" hidden><div class="k">earned back</div><div class="v num" id="earned"></div></div>
     </div>
     <div class="block"><h2>What happened</h2><div class="body" id="events"></div></div>
     <div class="block"><h2>World shifts so far</h2><div class="body" id="world"></div></div>
@@ -347,6 +355,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
         <span><i class="sw" style="background:var(--model)"></i>paid: the model was called</span>
         <span><i class="sw" style="background:var(--reflex)"></i>free: reflex decided</span>
         <span><i class="sw" style="background:var(--idle)"></i>idle: no budget, no reflex</span>
+        <span id="spawnkey" hidden><i class="sw" style="background:transparent;border:1.5px solid var(--reflex)"></i>tokens spent on a new body</span>
         <span><i class="sw" style="background:var(--food)"></i>report filed (stacked on top)</span>
         <span><i class="sw" style="border-left:2px dashed var(--food);width:0;border-radius:0"></i>world shifted</span>
       </div>
@@ -362,7 +371,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   </div>
   <div class="strip" id="strip" tabindex="0" aria-label="Spend per tick, click or drag to scrub"><svg id="stripsvg" preserveAspectRatio="none"></svg><div class="tip" id="tip"></div></div>
   <input type="range" id="scrub" min="1" max="1" value="1" aria-label="Tick">
-  <div class="hint">Drag the strip or use ← → keys. Bar height is tokens charged that tick, with the report's cost stacked on the tick it was filed.</div>
+  <div class="hint">Drag the strip or use ← → keys. Bar height is tokens charged that tick: thinking first, then any spend on a new body, then the report filed on that tick.</div>
 </section>
 
 <section class="foot">
@@ -547,14 +556,22 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     const preds = st.predators || (st.predator ? [st.predator] : []);
     preds.forEach(([x, y]) => { const r = cell * 0.32; ctx.fillStyle = css('--predator'); ctx.beginPath(); ctx.moveTo(cx(x), cx(y) - r); ctx.lineTo(cx(x) + r, cx(y)); ctx.lineTo(cx(x), cx(y) + r); ctx.lineTo(cx(x) - r, cx(y)); ctx.closePath(); ctx.fill();
       ctx.fillStyle = css('--eye'); ctx.beginPath(); ctx.arc(cx(x) - r * 0.28, cx(y) - r * 0.1, cell * 0.05, 0, 7); ctx.arc(cx(x) + r * 0.28, cx(y) - r * 0.1, cell * 0.05, 0, 7); ctx.fill(); });
-    // creature
-    const [x, y] = st.pos; const stage = stageOf(t.tick); const r = cell * (stage === 'hatchling' ? 0.26 : stage === 'juvenile' ? 0.31 : 0.36);
-    if (t.source.startsWith('model') || t.source === 'parse_error' || t.source === 'think_limit') { ctx.strokeStyle = css('--model'); ctx.lineWidth = Math.max(2, cell * 0.06); ctx.beginPath(); ctx.arc(cx(x), cx(y), r + cell * 0.12, 0, 7); ctx.stroke(); }
-    ctx.fillStyle = st.alive ? css('--creature') : css('--idle'); ctx.beginPath(); ctx.arc(cx(x), cx(y), r, 0, 7); ctx.fill();
-    ctx.fillStyle = st.alive ? css('--creature-dark') : css('--ink-3'); ctx.beginPath(); ctx.arc(cx(x), cx(y) + r * 0.35, r * 0.62, 0, Math.PI, false); ctx.fill();
-    ctx.strokeStyle = css('--eye'); ctx.fillStyle = css('--eye'); ctx.lineWidth = Math.max(1.5, cell * 0.05);
-    if (st.alive) { ctx.beginPath(); ctx.arc(cx(x) - r * 0.35, cx(y) - r * 0.2, r * 0.16, 0, 7); ctx.arc(cx(x) + r * 0.35, cx(y) - r * 0.2, r * 0.16, 0, 7); ctx.fill(); }
-    else { const e = r * 0.16; [[-1, 0], [1, 0]].forEach(([sx]) => { const ex = cx(x) + sx * r * 0.35, ey = cx(y) - r * 0.2; ctx.beginPath(); ctx.moveTo(ex - e, ey - e); ctx.lineTo(ex + e, ey + e); ctx.moveTo(ex + e, ey - e); ctx.lineTo(ex - e, ey + e); ctx.stroke(); }); }
+    // every living body, with the founder drawn largest
+    const stage = stageOf(t.tick);
+    const base = cell * (stage === 'hatchling' ? 0.26 : stage === 'juvenile' ? 0.31 : 0.36);
+    const bodies = (st.critters || [{ id: 0, pos: st.pos, alive: st.alive }]);
+    const shown = bodies.filter(b => b.alive);
+    const paid = t.source.startsWith('model') || t.source === 'crisis' || t.source === 'parse_error' || t.source === 'think_limit';
+    (shown.length ? shown : [{ id: 0, pos: st.pos, alive: false }]).forEach(b => {
+      const [x, y] = b.pos, live = b.alive !== false;
+      const r = b.id === 0 ? base : base * 0.82;
+      if (paid) { ctx.strokeStyle = css('--model'); ctx.lineWidth = Math.max(2, cell * 0.06); ctx.beginPath(); ctx.arc(cx(x), cx(y), r + cell * 0.12, 0, 7); ctx.stroke(); }
+      ctx.fillStyle = live ? css('--creature') : css('--idle'); ctx.beginPath(); ctx.arc(cx(x), cx(y), r, 0, 7); ctx.fill();
+      ctx.fillStyle = live ? css('--creature-dark') : css('--ink-3'); ctx.beginPath(); ctx.arc(cx(x), cx(y) + r * 0.35, r * 0.62, 0, Math.PI, false); ctx.fill();
+      ctx.strokeStyle = css('--eye'); ctx.fillStyle = css('--eye'); ctx.lineWidth = Math.max(1.5, cell * 0.05);
+      if (live) { ctx.beginPath(); ctx.arc(cx(x) - r * 0.35, cx(y) - r * 0.2, r * 0.16, 0, 7); ctx.arc(cx(x) + r * 0.35, cx(y) - r * 0.2, r * 0.16, 0, 7); ctx.fill(); }
+      else { const e = r * 0.16; [[-1], [1]].forEach(([sx]) => { const ex = cx(x) + sx * r * 0.35, ey = cx(y) - r * 0.2; ctx.beginPath(); ctx.moveTo(ex - e, ey - e); ctx.lineTo(ex + e, ey + e); ctx.moveTo(ex + e, ey - e); ctx.lineTo(ex - e, ey + e); ctx.stroke(); }); }
+    });
   }
   function stageOf(t) { return t < 15 ? 'hatchling' : t < 35 ? 'juvenile' : 'adult'; }
 
@@ -573,6 +590,13 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     $('src').innerHTML = '<span class="chip ' + src + '">' + esc(src === 'model' ? 'model' + (t.source !== 'model' ? ' (' + t.source.replace(/_/g, ' ') + ')' : '') : src) + '</span>';
     $('act').textContent = t.action; $('cost').textContent = fmt(t.tick_cost);
     $('reflexv').textContent = t.reflex_version ? 'v' + t.reflex_version + (t.reflex_error ? ' · error' : '') : 'none';
+    const colony = t.colony || (st.critters || []).filter(b => b.alive).length;
+    const hasColony = (st.critters || []).length > 1 || (st.earned || 0) > 0;
+    $('colonyfact').hidden = !hasColony; $('earnedfact').hidden = !hasColony;
+    if (hasColony) {
+      $('colony').textContent = colony + (colony === 1 ? ' body' : ' bodies');
+      $('earned').textContent = fmt(st.earned || 0) + (t.earned_this_tick ? '  +' + fmt(t.earned_this_tick) : '');
+    }
     const ev = t.events.length ? t.events.join(', ') : 'nothing';
     $('events').innerHTML = esc(ev.replace(/, DRIFT: [^,]*$/, '')) + (t.drift ? '\n<b style="color:var(--food)">WORLD SHIFTED · ' + esc(t.drift) + '</b>' : '') + (t.reflex_error ? '\n<span style="color:var(--predator)">reflex error: ' + esc(t.reflex_error) + '</span>' : '');
     const rules = []; if (st.predator_mode === 'camp') rules.push('predators camp food'); const drifts = run.ticks.slice(0, i + 1).filter(x => x.drift).map(x => x.drift);
@@ -600,20 +624,34 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     const n = run.ticks.length;
     const reportCost = t => callsAt(t.tick, 'report').reduce((a, c) => a + (c.charged || 0), 0);
     const max = Math.max(1, ...run.ticks.map(t => t.tick_cost + reportCost(t)));
+    const anySpawn = run.ticks.some(t => t.spawn_spend);
     svg.setAttribute('viewBox', '0 0 ' + n * 10 + ' 100');
     bars = run.ticks.map((t, k) => {
       const g = document.createElementNS(NS, 'g');
-      const h = t.tick_cost > 0 ? Math.max(3, 96 * t.tick_cost / max) : (t.source === 'idle' ? 2 : 4);
+      const think = Math.max(0, (t.tick_cost || 0) - (t.spawn_spend || 0));
+      const h = think > 0 ? Math.max(3, 96 * think / max) : (t.source === 'idle' ? 2 : 4);
       const r = document.createElementNS(NS, 'rect');
       r.setAttribute('x', k * 10 + 1); r.setAttribute('y', 100 - h); r.setAttribute('width', 8); r.setAttribute('height', h);
       r.setAttribute('fill', t.source === 'reflex' ? css('--reflex') : t.source === 'idle' ? css('--idle') : css('--model'));
       g.appendChild(r);
+      let top = h;
+      const sp = t.spawn_spend || 0;
+      if (sp > 0) {
+        const sh = Math.max(4, 96 * sp / max);
+        const d = document.createElementNS(NS, 'rect');
+        d.setAttribute('x', k * 10 + 1.6); d.setAttribute('y', 100 - top - 1.5 - sh);
+        d.setAttribute('width', 6.8); d.setAttribute('height', sh);
+        d.setAttribute('fill', 'none'); d.setAttribute('stroke', css('--reflex'));
+        d.setAttribute('stroke-width', 1.4); d.setAttribute('vector-effect', 'non-scaling-stroke');
+        g.appendChild(d); top += 1.5 + sh;
+      }
       const rc = reportCost(t);
-      if (rc > 0) { const rh = Math.max(3, 96 * rc / max); const d = document.createElementNS(NS, 'rect'); d.setAttribute('x', k * 10 + 1); d.setAttribute('y', 100 - h - 1 - rh); d.setAttribute('width', 8); d.setAttribute('height', rh); d.setAttribute('fill', css('--food')); g.appendChild(d); }
+      if (rc > 0) { const rh = Math.max(3, 96 * rc / max); const d = document.createElementNS(NS, 'rect'); d.setAttribute('x', k * 10 + 1); d.setAttribute('y', 100 - top - 1 - rh); d.setAttribute('width', 8); d.setAttribute('height', rh); d.setAttribute('fill', css('--food')); g.appendChild(d); }
       svg.appendChild(g); return g;
     });
     run.ticks.forEach((t, k) => { if (!t.drift) return; const l = document.createElementNS(NS, 'line'); l.setAttribute('x1', k * 10 + 10); l.setAttribute('x2', k * 10 + 10); l.setAttribute('y1', 0); l.setAttribute('y2', 100); l.setAttribute('stroke', css('--food')); l.setAttribute('stroke-width', 1); l.setAttribute('stroke-dasharray', '3 2'); l.setAttribute('vector-effect', 'non-scaling-stroke'); svg.appendChild(l); });
     const cur = document.createElementNS(NS, 'rect'); cur.id = 'cursor'; cur.setAttribute('y', 0); cur.setAttribute('width', 10); cur.setAttribute('height', 100); cur.setAttribute('fill', css('--ink')); cur.setAttribute('opacity', 0.14); svg.appendChild(cur);
+    $('spawnkey').hidden = !anySpawn;
     $('scrub').max = n; $('scrub').min = 1;
   }
   function markStrip() { const cur = $('cursor'); if (cur) cur.setAttribute('x', i * 10); }
@@ -623,7 +661,7 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   strip.addEventListener('pointerdown', e => { dragging = true; strip.setPointerCapture(e.pointerId); stop(); i = tickFromEvent(e); show(); });
   strip.addEventListener('pointermove', e => { const k = tickFromEvent(e); const t = run.ticks[k]; const b = strip.getBoundingClientRect(); tip.style.display = 'block'; tip.style.left = ((k + 0.5) / run.ticks.length * b.width) + 'px'; tip.style.top = '0px';
     const rc = callsAt(t.tick, 'report').reduce((a, c) => a + (c.charged || 0), 0);
-    tip.textContent = 'tick ' + t.tick + ' · ' + t.source.replace(/_/g, ' ') + ' · ' + fmt(t.tick_cost) + ' tokens' + (rc ? ' + report ' + fmt(rc) : '') + ' · ' + fmt(t.budget_after - rc) + ' left'; if (dragging) { i = k; show(); } });
+    tip.textContent = 'tick ' + t.tick + ' · ' + t.source.replace(/_/g, ' ') + ' · ' + fmt(t.tick_cost) + ' tokens' + (t.spawn_spend ? ' (incl. ' + fmt(t.spawn_spend) + ' spawn)' : '') + (rc ? ' + report ' + fmt(rc) : '') + ' · ' + fmt(t.budget_after - rc) + ' left'; if (dragging) { i = k; show(); } });
   strip.addEventListener('pointerup', () => dragging = false);
   strip.addEventListener('pointerleave', () => { tip.style.display = 'none'; dragging = false; });
   $('scrub').addEventListener('input', e => { stop(); i = +e.target.value - 1; show(); });

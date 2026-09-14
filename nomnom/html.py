@@ -44,9 +44,30 @@ def load_run(run_dir: str) -> dict:
     }
 
 
-def render(runs: list, wrap: bool = True) -> str:
+DEFAULT_REPO = "https://github.com/sturdynut/token-nom-noms"
+
+
+def repo_url() -> str:
+    """The origin remote as a browsable URL, so a fork's page links to the fork."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "remote", "get-url", "origin"],
+                             capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:  # noqa: BLE001
+        return DEFAULT_REPO
+    if not out:
+        return DEFAULT_REPO
+    if out.startswith("git@"):
+        out = "https://" + out[4:].replace(":", "/", 1)
+    return out[:-4] if out.endswith(".git") else out
+
+
+def render(runs: list, wrap: bool = True, repo: str = None) -> str:
+    repo = repo or repo_url()
     data = json.dumps(runs, separators=(",", ":")).replace("</", "<\\/")
-    body = TEMPLATE.replace("__DATA__", data)
+    body = (TEMPLATE.replace("__DATA__", data)
+            .replace("__REPO_SHORT__", repo.split("//", 1)[-1])
+            .replace("__REPO__", repo))
     if not wrap:
         return body
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -54,12 +75,12 @@ def render(runs: list, wrap: bool = True) -> str:
             + body + "\n</body>\n</html>\n")
 
 
-def write_html(run_dirs: list, out: str = None, wrap: bool = True) -> str:
+def write_html(run_dirs: list, out: str = None, wrap: bool = True, repo: str = None) -> str:
     runs = [load_run(d) for d in run_dirs]
     if out is None:
         out = os.path.join(run_dirs[0], "replay.html")
     with open(out, "w") as f:
-        f.write(render(runs, wrap))
+        f.write(render(runs, wrap, repo))
     return out
 
 
@@ -96,7 +117,12 @@ h1{font-size:clamp(26px,3.4vw,38px);font-weight:700;letter-spacing:-0.01em;line-
 h2{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
 .num{font-variant-numeric:tabular-nums}
-header{margin-bottom:14px}
+header{margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;justify-content:space-between}
+.repo{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px;text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:2px}
+.repo:hover{color:var(--ink);border-bottom-color:var(--ink-3)}
+.repo svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.foot-link{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-3)}
+.foot-link a{color:var(--ink-2)}
 .runbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px;margin-bottom:16px}
 .runbar .sub{color:var(--ink-2);font-size:13.5px}
 .runbar .sub b{color:var(--ink);font-weight:600}
@@ -153,7 +179,10 @@ button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min
 .how p{margin:0;font-size:13.5px;color:var(--ink-2);max-width:46ch}
 .how b{color:var(--ink);font-weight:600}
 .finding{margin:0;font-size:14.5px;line-height:1.45;color:var(--ink);border-left:3px solid var(--reflex);padding-left:12px;max-width:62ch}
-.guide{margin:0;font-size:13px;color:var(--ink-2)}
+.guide{display:grid;gap:7px;font-size:13px;color:var(--ink-2)}
+.guide p{margin:0}
+.keys{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.keys li{display:flex;gap:4px;align-items:baseline}
 .guide .k{font-weight:600;white-space:nowrap}
 .guide .k::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:baseline;background:currentColor}
 .guide .paid{color:var(--model)}.guide .free{color:var(--reflex)}
@@ -215,6 +244,9 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
 
 <header>
   <h1>Token Nom Noms</h1>
+  <a class="repo" href="__REPO__">Source, logs and leaderboard on GitHub
+    <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2h7v7"/><path d="M12 2 5.5 8.5"/><path d="M9.5 8.5V12H2V4.5h3.5"/></svg>
+  </a>
 </header>
 
 <section class="explain">
@@ -234,11 +266,15 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
     </div>
   </div>
   <p class="finding">The surprise so far: the better the model, the less it spends. The strongest wrote itself a pathfinder on its very first move and barely thought again, outliving a weaker model that burned nearly three times the tokens before dying.</p>
-  <p class="guide">Pick a run, press play, and watch the bar along the bottom.
-    <span class="k paid">Purple</span> is a paid thought.
-    <span class="k free">Green</span> is the free reflex playing.
-    <span class="k rept">Amber</span> is a report the agent was required to file.
-    <span class="k out">Grey</span> is out of money with no reflex to fall back on.</p>
+  <div class="guide">
+    <p>Pick a run, press play, and watch the bar along the bottom.</p>
+    <ul class="keys">
+      <li><span class="k paid">Purple</span> is a paid thought.</li>
+      <li><span class="k free">Green</span> is the free reflex playing.</li>
+      <li><span class="k rept">Amber</span> is a report the agent was required to file.</li>
+      <li><span class="k out">Grey</span> is out of money with no reflex to fall back on.</li>
+    </ul>
+  </div>
 </section>
 
 <section class="picker">
@@ -333,6 +369,9 @@ pre{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:
   <div><h2 style="margin-bottom:8px">Strategy reports</h2><div class="reports" id="reports"></div></div>
   <div><h2 style="margin-bottom:8px">Final reflex</h2><pre class="mono" id="reflex"></pre></div>
 </section>
+
+<p class="foot-link">Every run here is committed with its full logs. Fork it, run your own agent, and
+  open a pull request: <a href="__REPO__">__REPO_SHORT__</a></p>
 
 <script id="runs" type="application/json">__DATA__</script>
 <script>
